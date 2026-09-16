@@ -14,7 +14,10 @@ function MenuSection({ selectedCategory }: MenuSectionProps) {
             );
 
     return (
-        <section className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
+        <section
+            id="menu-section"
+            className="scroll-mt-[130px] mx-auto max-w-6xl px-4 py-10 sm:py-14"
+        >
             <div className="mb-8">
                 <p className="text-sm font-semibold uppercase tracking-widest text-yellow-400">
                     Explore

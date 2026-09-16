@@ -1,3 +1,4 @@
+import { restaurant } from "../data/restaurant";
 function Header() {
     return (
         <header className="sticky top-0 z-50 border-b border-white/10 bg-gray-950/95 backdrop-blur">
@@ -16,7 +17,7 @@ function Header() {
 
                 {/* Call Button */}
                 <a
-                    href="tel:+910000000000"
+                    href={`tel:${restaurant.phone}`}
                     className="rounded-full bg-yellow-400 px-4 py-2 text-sm font-bold text-gray-950 transition hover:bg-yellow-300 active:scale-95"
                 >
                     📞 Call to Order

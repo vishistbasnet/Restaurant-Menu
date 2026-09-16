@@ -1,3 +1,4 @@
+import { restaurant } from "../../data/restaurant";
 function Hero() {
     return (
         <section className="relative overflow-hidden border-b border-white/10 bg-gray-950">
@@ -37,7 +38,7 @@ function Hero() {
 
                     {/* CTA */}
                     <a
-                        href="tel:+910000000000"
+                        href={`tel:${restaurant.phone}`}
                         className="mt-8 inline-flex items-center justify-center rounded-xl bg-yellow-400 px-6 py-3 font-bold text-gray-950 shadow-lg shadow-yellow-400/10 transition hover:bg-yellow-300 active:scale-95"
                     >
                         📞 Call to Order
