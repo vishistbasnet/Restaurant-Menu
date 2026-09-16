@@ -14,6 +14,7 @@ import AdminDashboard from "./admin/pages/AdminDashboard";
 import ProtectedRoute from "./admin/components/ProtectedRoute";
 import AdminLayout from "./admin/components/layout/AdminLayout";
 import AdminCategories from "./admin/pages/AdminCategories";
+import AdminMenu from "./admin/pages/AdminMenu";
 
 import "./index.css";
 
@@ -42,6 +43,10 @@ createRoot(document.getElementById("root")!).render(
               element={<AdminCategories />}
             />
           </Route>
+          <Route
+            path="/admin/menu"
+            element={<AdminMenu />}
+          />
         </Route>
       </Routes>
     </BrowserRouter>
