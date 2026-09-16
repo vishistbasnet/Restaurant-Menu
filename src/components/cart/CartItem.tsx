@@ -1,11 +1,9 @@
 import { useCart } from "../../context/CartContext";
-
-import type { CartItem as CartItemType } from "../../types/menu";
-
 import {
     getItemPrice,
     getItemTotal,
 } from "../../utils/orderSummary";
+import type { CartItem as CartItemType } from "../../types/menu";
 
 interface CartItemProps {
     cartItem: CartItemType;
@@ -22,43 +20,43 @@ function CartItem({ cartItem }: CartItemProps) {
     const optionLabel = selectedOption?.label;
 
     return (
-        <div className="border-b border-white/10 py-4">
+        <div className="py-4">
+            {/* Item information */}
             <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                    <h3 className="font-semibold text-white">
+                    <h3 className="text-base font-bold leading-6 text-white sm:text-lg">
                         {item.name}
                     </h3>
 
-                    {optionLabel && (
-                        <p className="mt-1 text-sm font-medium text-yellow-400">
-                            {optionLabel}
-                        </p>
-                    )}
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                        {optionLabel && (
+                            <span className="rounded-md bg-yellow-400/10 px-2 py-0.5 text-xs font-semibold text-yellow-400">
+                                {optionLabel}
+                            </span>
+                        )}
 
-                    {price !== null ? (
-                        <p className="mt-1 text-sm text-gray-400">
-                            ₹{price} each
-                        </p>
-                    ) : (
-                        <p className="mt-1 text-sm text-gray-400">
-                            Price unavailable
-                        </p>
-                    )}
+                        {price !== null && (
+                            <span className="text-sm text-gray-500">
+                                ₹{price} each
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 <button
                     onClick={() =>
                         removeFromCart(item.id, optionLabel)
                     }
-                    className="text-xs font-semibold text-red-400 transition hover:text-red-300"
+                    className="shrink-0 text-xs font-semibold text-red-400 transition hover:text-red-300"
                 >
                     Remove
                 </button>
             </div>
 
-            <div className="mt-3 flex items-center justify-between">
-                <p className="font-bold text-white">
-                    {price !== null
+            {/* Price + quantity */}
+            <div className="mt-4 flex items-center justify-between gap-4">
+                <p className="text-lg font-black text-yellow-400">
+                    {itemTotal !== null
                         ? `₹${itemTotal}`
                         : "Price unavailable"}
                 </p>
@@ -72,12 +70,16 @@ function CartItem({ cartItem }: CartItemProps) {
                                 optionLabel
                             )
                         }
-                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-lg font-bold text-white transition hover:bg-white/10"
+                        aria-label={`Decrease quantity of ${item.name}`}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-lg font-bold text-white transition hover:bg-white/10 active:scale-95"
                     >
                         −
                     </button>
 
-                    <span className="w-6 text-center font-bold text-white">
+                    <span
+                        aria-label={`Quantity ${quantity}`}
+                        className="flex h-10 min-w-8 items-center justify-center text-base font-bold text-white"
+                    >
                         {quantity}
                     </span>
 
@@ -89,7 +91,8 @@ function CartItem({ cartItem }: CartItemProps) {
                                 optionLabel
                             )
                         }
-                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-400 text-lg font-bold text-gray-950 transition hover:bg-yellow-300"
+                        aria-label={`Increase quantity of ${item.name}`}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-400 text-lg font-black text-gray-950 transition hover:bg-yellow-300 active:scale-95"
                     >
                         +
                     </button>
