@@ -2,6 +2,11 @@ import { useCart } from "../../context/CartContext";
 
 import type { CartItem as CartItemType } from "../../types/menu";
 
+import {
+    getItemPrice,
+    getItemTotal,
+} from "../../utils/orderSummary";
+
 interface CartItemProps {
     cartItem: CartItemType;
 }
@@ -11,11 +16,8 @@ function CartItem({ cartItem }: CartItemProps) {
 
     const { item, quantity, selectedOption } = cartItem;
 
-    const price =
-        selectedOption?.price ??
-        (item.pricing.type === "single"
-            ? item.pricing.price
-            : null);
+    const price = getItemPrice(cartItem);
+    const itemTotal = getItemTotal(cartItem);
 
     const optionLabel = selectedOption?.label;
 
@@ -57,7 +59,7 @@ function CartItem({ cartItem }: CartItemProps) {
             <div className="mt-3 flex items-center justify-between">
                 <p className="font-bold text-white">
                     {price !== null
-                        ? `₹${price * quantity}`
+                        ? `₹${itemTotal}`
                         : "Price unavailable"}
                 </p>
 

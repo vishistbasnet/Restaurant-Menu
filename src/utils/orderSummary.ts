@@ -1,0 +1,128 @@
+import type { CartItem } from "../types/menu";
+
+export function getItemPrice(cartItem: CartItem): number | null {
+    if (cartItem.selectedOption?.price !== undefined) {
+        return cartItem.selectedOption.price;
+    }
+
+    if (cartItem.item.pricing.type === "single") {
+        return cartItem.item.pricing.price;
+    }
+
+    return null;
+}
+
+export function getItemTotal(cartItem: CartItem): number | null {
+    const price = getItemPrice(cartItem);
+
+    if (price === null) {
+        return null;
+    }
+
+    return price * cartItem.quantity;
+}
+
+export function getOrderSubtotal(cartItems: CartItem[]): number {
+    return cartItems.reduce((total, cartItem) => {
+        const itemTotal = getItemTotal(cartItem);
+
+        if (itemTotal === null) {
+            return total;
+        }
+
+        return total + itemTotal;
+    }, 0);
+}
+
+export interface OrderItem {
+    itemId: string;
+    itemName: string;
+    option?: string;
+    quantity: number;
+    unitPrice: number | null;
+    totalPrice: number | null;
+}
+
+export interface OrderData {
+    items: OrderItem[];
+    subtotal: number;
+    orderType: "pickup";
+}
+
+export function createOrderData(
+    cartItems: CartItem[]
+): OrderData {
+    const items: OrderItem[] = cartItems.map((cartItem) => {
+        const unitPrice = getItemPrice(cartItem);
+        const totalPrice = getItemTotal(cartItem);
+
+        return {
+            itemId: cartItem.item.id,
+            itemName: cartItem.item.name,
+            option: cartItem.selectedOption?.label,
+            quantity: cartItem.quantity,
+            unitPrice,
+            totalPrice,
+        };
+    });
+
+    return {
+        items,
+        subtotal: getOrderSubtotal(cartItems),
+        orderType: "pickup",
+    };
+}
+
+export function formatOrderSummary(order: OrderData): string {
+    const lines: string[] = [];
+
+    lines.push("🍽️ Meal & Deal");
+    lines.push("100% Pure Vegetarian");
+    lines.push("");
+    lines.push("🧾 Order Summary");
+    lines.push("--------------------");
+
+    order.items.forEach((item, index) => {
+        const optionText = item.option
+            ? ` (${item.option})`
+            : "";
+
+        const priceText =
+            item.totalPrice !== null
+                ? `₹${item.totalPrice}`
+                : "Price unavailable";
+
+        lines.push(
+            `${index + 1}. ${item.itemName}${optionText}`
+        );
+        lines.push(
+            `   ${item.quantity} × ₹${item.unitPrice ?? "N/A"} = ${priceText}`
+        );
+    });
+
+    lines.push("--------------------");
+    lines.push(`Subtotal: ₹${order.subtotal}`);
+    lines.push(
+        `Order Type: ${order.orderType === "pickup" ? "Pickup" : order.orderType}`
+    );
+    lines.push("");
+    lines.push("📞 Please call the restaurant to confirm your order.");
+    lines.push("🏪 Pickup Only");
+
+    return lines.join("\n");
+}
+
+export async function copyOrderSummary(
+    orderSummary: string
+): Promise<void> {
+    await navigator.clipboard.writeText(orderSummary);
+}
+
+export function createWhatsAppOrderUrl(
+    phone: string,
+    orderSummary: string
+): string {
+    const encodedMessage = encodeURIComponent(orderSummary);
+
+    return `https://wa.me/${phone}?text=${encodedMessage}`;
+}

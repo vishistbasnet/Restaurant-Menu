@@ -1,5 +1,14 @@
+import { useState } from "react";
 import { useCart } from "../../context/CartContext";
 import CartItem from "./CartItem";
+import {
+    createOrderData,
+    formatOrderSummary,
+    copyOrderSummary,
+    createWhatsAppOrderUrl,
+} from "../../utils/orderSummary";
+import { restaurant } from "../../data/restaurant";
+
 
 interface CartPanelProps {
     onClose: () => void;
@@ -7,20 +16,15 @@ interface CartPanelProps {
 
 function CartPanel({ onClose }: CartPanelProps) {
     const { cartItems } = useCart();
+    const [isCopied, setIsCopied] = useState(false);
 
-    const totalPrice = cartItems.reduce((total, cartItem) => {
-        const price =
-            cartItem.selectedOption?.price ??
-            (cartItem.item.pricing.type === "single"
-                ? cartItem.item.pricing.price
-                : null);
+    const order = createOrderData(cartItems);
+    const orderSummary = formatOrderSummary(order);
 
-        if (price !== null) {
-            return total + price * cartItem.quantity;
-        }
-
-        return total;
-    }, 0);
+    const whatsappUrl = createWhatsAppOrderUrl(
+        restaurant.whatsapp,
+        orderSummary
+    );
 
     return (
         <div className="fixed inset-0 z-[60]">
@@ -88,7 +92,7 @@ function CartPanel({ onClose }: CartPanelProps) {
                         </span>
 
                         <span className="text-xl font-extrabold text-yellow-400">
-                            ₹{totalPrice}
+                            ₹{order.subtotal}
                         </span>
                     </div>
 
@@ -108,8 +112,34 @@ function CartPanel({ onClose }: CartPanelProps) {
                         </div>
                     </div>
 
+                    <button
+                        onClick={async () => {
+                            try {
+                                await copyOrderSummary(orderSummary);
+                                setIsCopied(true);
+
+                                setTimeout(() => {
+                                    setIsCopied(false);
+                                }, 2000);
+                            } catch (error) {
+                                console.error("Failed to copy order:", error);
+                            }
+                        }}
+                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 font-bold text-white transition hover:bg-white/10 active:scale-[0.98]"
+                    >
+                        {isCopied ? "✓ Order Copied" : "📋 Copy Order"}
+                    </button>
                     <a
-                        href="tel:+910000000000"
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 px-5 py-3.5 font-bold text-white transition hover:bg-green-400 active:scale-[0.98]"
+                    >
+                        💬 WhatsApp Order
+                    </a>
+
+                    <a
+                        href={`tel:${restaurant.phone}`}
                         className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-yellow-400 px-5 py-3.5 font-bold text-gray-950 transition hover:bg-yellow-300 active:scale-[0.98]"
                     >
                         📞 Call to Order

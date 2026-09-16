@@ -1,4 +1,5 @@
 import { useCart } from "../../context/CartContext";
+import { getOrderSubtotal } from "../../utils/orderSummary";
 
 interface CartBarProps {
     onViewCart: () => void;
@@ -16,19 +17,7 @@ function CartBar({ onViewCart }: CartBarProps) {
         0
     );
 
-    const totalPrice = cartItems.reduce((total, cartItem) => {
-        const price =
-            cartItem.selectedOption?.price ??
-            (cartItem.item.pricing.type === "single"
-                ? cartItem.item.pricing.price
-                : null);
-
-        if (price !== null) {
-            return total + price * cartItem.quantity;
-        }
-
-        return total;
-    }, 0);
+    const totalPrice = getOrderSubtotal(cartItems);
 
     return (
         <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-gray-900/95 p-3 shadow-2xl backdrop-blur">
