@@ -55,7 +55,7 @@ function CartPanel({ onClose }: CartPanelProps) {
                 className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             />
 
-            {/* Cart */}
+            {/* Cart panel */}
             <aside className="absolute inset-0 flex h-full w-full flex-col bg-gray-950 sm:left-auto sm:right-0 sm:max-w-md sm:border-l sm:border-white/10 sm:shadow-2xl">
                 {/* Header */}
                 <div className="shrink-0 border-b border-white/10 bg-gray-950 px-5 py-4">
@@ -90,12 +90,14 @@ function CartPanel({ onClose }: CartPanelProps) {
                 {/* Cart items */}
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5">
                     {cartItems.length > 0 ? (
-                        <div className="divide-y divide-white/10">
+                        <div className="space-y-2 py-3">
                             {cartItems.map((cartItem, index) => (
-                                <CartItem
+                                <div
                                     key={`${cartItem.item.id}-${cartItem.selectedOption?.label ?? "default"}-${index}`}
-                                    cartItem={cartItem}
-                                />
+                                    className="rounded-2xl border border-white/10 bg-white/[0.03] px-4"
+                                >
+                                    <CartItem cartItem={cartItem} />
+                                </div>
                             ))}
                         </div>
                     ) : (
@@ -125,35 +127,37 @@ function CartPanel({ onClose }: CartPanelProps) {
                     )}
                 </div>
 
-                {/* Compact checkout footer */}
+                {/* Cart footer */}
                 {cartItems.length > 0 && (
                     <div className="shrink-0 border-t border-white/10 bg-gray-900/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-                        {/* Pickup + subtotal */}
-                        <div className="flex items-center justify-between gap-4">
-                            <div className="flex min-w-0 items-center gap-2.5">
-                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-yellow-400/10 text-lg">
-                                    🏪
-                                </span>
+                        {/* Order summary */}
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex min-w-0 items-center gap-3">
+                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-yellow-400/10 text-lg">
+                                        🏪
+                                    </span>
 
-                                <div className="min-w-0">
-                                    <p className="text-sm font-bold text-white">
-                                        Pickup Only
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-bold text-white">
+                                            Pickup Only
+                                        </p>
+
+                                        <p className="mt-0.5 text-xs text-gray-500">
+                                            Call to confirm your order
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="shrink-0 text-right">
+                                    <p className="text-xs font-medium text-gray-500">
+                                        Subtotal
                                     </p>
 
-                                    <p className="truncate text-xs text-gray-500">
-                                        Call to confirm your order
+                                    <p className="mt-0.5 text-2xl font-black text-yellow-400">
+                                        ₹{order.subtotal}
                                     </p>
                                 </div>
-                            </div>
-
-                            <div className="shrink-0 text-right">
-                                <p className="text-xs text-gray-500">
-                                    Subtotal
-                                </p>
-
-                                <p className="text-xl font-black text-yellow-400">
-                                    ₹{order.subtotal}
-                                </p>
                             </div>
                         </div>
 
@@ -161,16 +165,16 @@ function CartPanel({ onClose }: CartPanelProps) {
                         <div className="mt-3 grid grid-cols-2 gap-2">
                             <button
                                 onClick={handleCopyOrder}
-                                className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-white/10 active:scale-[0.98]"
+                                className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-white/10 active:scale-[0.98]"
                             >
-                                {isCopied ? "✓ Copied" : "📋 Copy"}
+                                {isCopied ? "✓ Copied" : "📋 Copy Order"}
                             </button>
 
                             <a
                                 href={whatsappUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center justify-center gap-2 rounded-lg bg-green-500 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-green-400 active:scale-[0.98]"
+                                className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green-500 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-green-400 active:scale-[0.98]"
                             >
                                 💬 WhatsApp
                             </a>
@@ -179,10 +183,14 @@ function CartPanel({ onClose }: CartPanelProps) {
                         {/* Primary action */}
                         <a
                             href={`tel:${restaurant.phone}`}
-                            className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl bg-yellow-400 px-5 py-3.5 text-sm font-extrabold text-gray-950 transition hover:bg-yellow-300 active:scale-[0.98]"
+                            className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-yellow-400 px-5 py-3.5 text-sm font-extrabold text-gray-950 shadow-lg shadow-yellow-400/10 transition hover:bg-yellow-300 active:scale-[0.98]"
                         >
                             📞 Call to Order
                         </a>
+
+                        <p className="mt-2 text-center text-xs font-medium text-gray-500">
+                            No delivery • Pickup from restaurant
+                        </p>
                     </div>
                 )}
             </aside>
