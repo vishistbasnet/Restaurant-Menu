@@ -7,9 +7,13 @@ import {
 } from "react-router-dom";
 
 import App from "./App";
+
 import AdminLogin from "./admin/pages/AdminLogin";
 import AdminDashboard from "./admin/pages/AdminDashboard";
+
 import ProtectedRoute from "./admin/components/ProtectedRoute";
+import AdminLayout from "./admin/components/layout/AdminLayout";
+import AdminCategories from "./admin/pages/AdminCategories";
 
 import "./index.css";
 
@@ -26,12 +30,18 @@ createRoot(document.getElementById("root")!).render(
           element={<AdminLogin />}
         />
 
-        {/* Protected Admin Routes */}
+        {/* Protected Admin Area */}
         <Route element={<ProtectedRoute />}>
-          <Route
-            path="/admin"
-            element={<AdminDashboard />}
-          />
+          <Route element={<AdminLayout />}>
+            <Route
+              path="/admin"
+              element={<AdminDashboard />}
+            />
+            <Route
+              path="/admin/categories"
+              element={<AdminCategories />}
+            />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>
