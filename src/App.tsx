@@ -20,6 +20,7 @@ import { getRestaurantStatus } from "./utils/restaurantHours";
 
 import type { MenuItem } from "./types/menu";
 import type { Restaurant } from "./types/restaurant";
+import Footer from "./components/layout/Footer";
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -111,6 +112,8 @@ function App() {
           />
         </main>
 
+        <Footer />
+
         <CartBar onViewCart={() => setIsCartOpen(true)} />
 
         {isCartOpen && (
@@ -122,6 +125,7 @@ function App() {
         )}
       </div>
     </CartProvider>
+
   );
 }
 
