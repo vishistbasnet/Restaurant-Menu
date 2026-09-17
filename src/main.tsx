@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+
 import { StrictMode, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -6,7 +8,7 @@ import {
   Routes,
 } from "react-router-dom";
 
-import App from "./App";
+const App = lazy(() => import("./App"));
 
 import "./index.css";
 
@@ -49,7 +51,7 @@ function AdminPageLoader() {
       <div className="text-center">
         <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-yellow-400" />
         <p className="mt-4 text-sm font-medium text-gray-400">
-          Loading admin panel...
+          Loading...
         </p>
       </div>
     </div>

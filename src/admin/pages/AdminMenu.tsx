@@ -88,7 +88,13 @@ function AdminMenu() {
     }
 
     useEffect(() => {
-        loadData();
+        const timer = window.setTimeout(() => {
+            void loadData();
+        }, 0);
+
+        return () => {
+            window.clearTimeout(timer);
+        };
     }, []);
 
     function openCreateModal() {
@@ -486,8 +492,8 @@ function AdminMenu() {
 
                                                 <span
                                                     className={`rounded-md px-2 py-1 text-xs font-semibold ${item.is_available
-                                                            ? "bg-emerald-500/10 text-emerald-300"
-                                                            : "bg-red-500/10 text-red-300"
+                                                        ? "bg-emerald-500/10 text-emerald-300"
+                                                        : "bg-red-500/10 text-red-300"
                                                         }`}
                                                 >
                                                     {item.is_available
@@ -730,9 +736,9 @@ function AdminMenu() {
                                                 )
                                             }
                                             className={`rounded-xl border p-4 text-left transition ${form.pricingMode ===
-                                                    "single"
-                                                    ? "border-yellow-400/50 bg-yellow-400/10"
-                                                    : "border-white/10 bg-white/[0.03] hover:bg-white/5"
+                                                "single"
+                                                ? "border-yellow-400/50 bg-yellow-400/10"
+                                                : "border-white/10 bg-white/[0.03] hover:bg-white/5"
                                                 }`}
                                         >
                                             <p className="font-semibold">
@@ -753,9 +759,9 @@ function AdminMenu() {
                                                 )
                                             }
                                             className={`rounded-xl border p-4 text-left transition ${form.pricingMode ===
-                                                    "options"
-                                                    ? "border-yellow-400/50 bg-yellow-400/10"
-                                                    : "border-white/10 bg-white/[0.03] hover:bg-white/5"
+                                                "options"
+                                                ? "border-yellow-400/50 bg-yellow-400/10"
+                                                : "border-white/10 bg-white/[0.03] hover:bg-white/5"
                                                 }`}
                                         >
                                             <p className="font-semibold">

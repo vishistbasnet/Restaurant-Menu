@@ -1,6 +1,4 @@
 import {
-    createContext,
-    useContext,
     useState,
     type ReactNode,
 } from "react";
@@ -11,31 +9,7 @@ import type {
     PriceOption,
 } from "../types/menu";
 
-interface CartContextType {
-    cartItems: CartItem[];
-
-    addToCart: (
-        item: MenuItem,
-        selectedOption?: PriceOption
-    ) => void;
-
-    removeFromCart: (
-        itemId: string,
-        selectedOptionLabel?: string
-    ) => void;
-
-    updateQuantity: (
-        itemId: string,
-        quantity: number,
-        selectedOptionLabel?: string
-    ) => void;
-
-    clearCart: () => void;
-}
-
-const CartContext = createContext<CartContextType | undefined>(
-    undefined
-);
+import { CartContext } from "./CartContextValue";
 
 interface CartProviderProps {
     children: ReactNode;
@@ -145,16 +119,4 @@ export function CartProvider({ children }: CartProviderProps) {
             {children}
         </CartContext.Provider>
     );
-}
-
-export function useCart() {
-    const context = useContext(CartContext);
-
-    if (!context) {
-        throw new Error(
-            "useCart must be used inside CartProvider"
-        );
-    }
-
-    return context;
 }

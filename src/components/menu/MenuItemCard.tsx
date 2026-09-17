@@ -1,4 +1,4 @@
-import { useCart } from "../../context/CartContext";
+import { useCart } from "../../context/useCart";
 import type { MenuItem } from "../../types/menu";
 
 interface MenuItemCardProps {

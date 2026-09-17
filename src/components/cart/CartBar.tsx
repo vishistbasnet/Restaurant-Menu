@@ -1,4 +1,4 @@
-import { useCart } from "../../context/CartContext";
+import { useCart } from "../../context/useCart";
 import { getOrderSubtotal } from "../../utils/orderSummary";
 
 interface CartBarProps {

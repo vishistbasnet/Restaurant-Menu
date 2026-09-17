@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { useCart } from "../../context/CartContext";
+import { useCart } from "../../context/useCart";
 
 import type { Restaurant } from "../../types/restaurant";
 import type { RestaurantStatus } from "../../utils/restaurantHours";

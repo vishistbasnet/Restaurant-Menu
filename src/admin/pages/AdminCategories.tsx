@@ -45,7 +45,13 @@ function AdminCategories() {
     }
 
     useEffect(() => {
-        loadCategories();
+        const timer = window.setTimeout(() => {
+            void loadCategories();
+        }, 0);
+
+        return () => {
+            window.clearTimeout(timer);
+        };
     }, []);
 
     function openCreateModal() {
@@ -243,8 +249,8 @@ function AdminCategories() {
                                             handleToggle(category)
                                         }
                                         className={`rounded-lg px-3 py-2 text-xs font-bold ${category.is_active
-                                                ? "bg-green-400/10 text-green-400"
-                                                : "bg-gray-400/10 text-gray-500"
+                                            ? "bg-green-400/10 text-green-400"
+                                            : "bg-gray-400/10 text-gray-500"
                                             }`}
                                     >
                                         {category.is_active
