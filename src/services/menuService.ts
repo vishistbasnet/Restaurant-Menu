@@ -4,12 +4,15 @@ export async function getRestaurant() {
     const { data, error } = await supabase
         .from("restaurants")
         .select("*")
-        .eq("name", "Meal & Deal")
-        .eq("is_active", true)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
     if (error) {
         throw new Error(`Failed to fetch restaurant: ${error.message}`);
+    }
+
+    if (!data) {
+        throw new Error("No active restaurant found.");
     }
 
     return data;

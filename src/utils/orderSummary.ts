@@ -73,12 +73,33 @@ export function createOrderData(
     };
 }
 
-export function formatOrderSummary(order: OrderData): string {
+interface FormatOrderSummaryOptions {
+    restaurantName?: string;
+    isOpen?: boolean;
+    statusMessage?: string;
+}
+
+export function formatOrderSummary(
+    order: OrderData,
+    options: FormatOrderSummaryOptions = {}
+): string {
+    const restaurantName =
+        options.restaurantName ?? "Meal & Deal";
+
+    const isOpen = options.isOpen ?? true;
+
     const lines: string[] = [];
 
-    lines.push("🍽️ Meal & Deal");
+    lines.push(`🍽️ ${restaurantName}`);
     lines.push("100% Pure Vegetarian");
     lines.push("");
+
+    if (!isOpen) {
+        lines.push("🔴 RESTAURANT CURRENTLY CLOSED");
+        lines.push(`⏰ ${options.statusMessage ?? "Please order later."}`);
+        lines.push("");
+    }
+
     lines.push("🧾 Order Summary");
     lines.push("--------------------");
 
@@ -95,6 +116,7 @@ export function formatOrderSummary(order: OrderData): string {
         lines.push(
             `${index + 1}. ${item.itemName}${optionText}`
         );
+
         lines.push(
             `   ${item.quantity} × ₹${item.unitPrice ?? "N/A"} = ${priceText}`
         );
@@ -102,12 +124,20 @@ export function formatOrderSummary(order: OrderData): string {
 
     lines.push("--------------------");
     lines.push(`Subtotal: ₹${order.subtotal}`);
-    lines.push(
-        `Order Type: ${order.orderType === "pickup" ? "Pickup" : order.orderType}`
-    );
+    lines.push("Order Type: Pickup");
     lines.push("");
-    lines.push("📞 Please call the restaurant to confirm your order.");
-    lines.push("🏪 Pickup Only");
+
+    if (isOpen) {
+        lines.push(
+            "📞 Please call the restaurant to confirm your order."
+        );
+        lines.push("🏪 Pickup Only");
+    } else {
+        lines.push("🚫 Ordering is currently closed.");
+        lines.push("🏪 Pickup Only");
+        lines.push("");
+        lines.push("Please place your order when the restaurant is open.");
+    }
 
     return lines.join("\n");
 }
@@ -122,7 +152,8 @@ export function createWhatsAppOrderUrl(
     phone: string,
     orderSummary: string
 ): string {
+    const cleanPhone = phone.replace(/\D/g, "");
     const encodedMessage = encodeURIComponent(orderSummary);
 
-    return `https://wa.me/${phone}?text=${encodedMessage}`;
+    return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
 }

@@ -16,17 +16,29 @@ import {
 
 import { mapSupabaseMenuItems } from "./services/menuMapper";
 
+import { getRestaurantStatus } from "./utils/restaurantHours";
+
 import type { MenuItem } from "./types/menu";
+import type { Restaurant } from "./types/restaurant";
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  const [categories, setCategories] = useState<string[]>([]);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [restaurant, setRestaurant] =
+    useState<Restaurant | null>(null);
+
+  const [categories, setCategories] =
+    useState<string[]>([])
+
+  const [menuItems, setMenuItems] =
+    useState<MenuItem[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [menuError, setMenuError] = useState<string | null>(null);
+  const restaurantStatus = restaurant
+    ? getRestaurantStatus(restaurant)
+    : null;
 
   useEffect(() => {
     async function loadMenu() {
@@ -34,11 +46,13 @@ function App() {
         setIsLoading(true);
         setMenuError(null);
 
-        const restaurant = await getRestaurant();
+        const restaurantData = await getRestaurant();
+
+        setRestaurant(restaurantData);
 
         const [categoryData, items] = await Promise.all([
-          getCategories(restaurant.id),
-          getMenuItems(restaurant.id),
+          getCategories(restaurantData.id),
+          getMenuItems(restaurantData.id),
         ]);
 
         const categoryMap = new Map(
@@ -72,10 +86,16 @@ function App() {
   return (
     <CartProvider>
       <div className="min-h-screen bg-gray-950 pb-24 text-white">
-        <Header />
+        <Header
+          restaurant={restaurant}
+          status={restaurantStatus}
+        />
 
         <main>
-          <Hero />
+          <Hero
+            restaurant={restaurant}
+            status={restaurantStatus}
+          />
 
           <CategoryTabs
             categories={categories}
@@ -96,6 +116,8 @@ function App() {
         {isCartOpen && (
           <CartPanel
             onClose={() => setIsCartOpen(false)}
+            restaurant={restaurant}
+            status={restaurantStatus}
           />
         )}
       </div>

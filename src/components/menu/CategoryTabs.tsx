@@ -46,8 +46,8 @@ function CategoryTabs({
                                             });
                                     }}
                                     className={`rounded-full px-4 py-2 text-sm font-semibold transition ${isActive
-                                            ? "bg-yellow-400 text-gray-950"
-                                            : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
+                                        ? "bg-yellow-400 text-gray-950"
+                                        : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
                                         }`}
                                 >
                                     {category}

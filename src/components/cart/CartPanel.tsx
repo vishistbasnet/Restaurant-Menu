@@ -1,7 +1,10 @@
 import { useState } from "react";
 
 import { useCart } from "../../context/CartContext";
-import { restaurant } from "../../data/restaurant";
+
+import type { Restaurant } from "../../types/restaurant";
+import type { RestaurantStatus } from "../../utils/restaurantHours";
+
 import {
     copyOrderSummary,
     createOrderData,
@@ -13,20 +16,35 @@ import CartItem from "./CartItem";
 
 interface CartPanelProps {
     onClose: () => void;
+    restaurant: Restaurant | null;
+    status: RestaurantStatus | null;
 }
 
-function CartPanel({ onClose }: CartPanelProps) {
+function CartPanel({
+    onClose,
+    restaurant,
+    status,
+}: CartPanelProps) {
     const { cartItems } = useCart();
 
     const [isCopied, setIsCopied] = useState(false);
 
     const order = createOrderData(cartItems);
-    const orderSummary = formatOrderSummary(order);
 
-    const whatsappUrl = createWhatsAppOrderUrl(
-        restaurant.whatsapp,
-        orderSummary
-    );
+    const isOpen = status?.isOpen ?? false;
+
+    const orderSummary = formatOrderSummary(order, {
+        restaurantName: restaurant?.name,
+        isOpen,
+        statusMessage: status?.message,
+    });
+
+    const whatsappUrl = restaurant?.whatsapp
+        ? createWhatsAppOrderUrl(
+            restaurant.whatsapp,
+            orderSummary
+        )
+        : null;
 
     const totalItems = cartItems.reduce(
         (total, cartItem) => total + cartItem.quantity,
@@ -36,6 +54,7 @@ function CartPanel({ onClose }: CartPanelProps) {
     async function handleCopyOrder() {
         try {
             await copyOrderSummary(orderSummary);
+
             setIsCopied(true);
 
             setTimeout(() => {
@@ -56,9 +75,10 @@ function CartPanel({ onClose }: CartPanelProps) {
             />
 
             {/* Cart panel */}
-            <aside className="absolute inset-0 flex h-full w-full flex-col bg-gray-950 sm:left-auto sm:right-0 sm:max-w-md sm:border-l sm:border-white/10 sm:shadow-2xl">
+            <aside className="absolute inset-y-0 right-0 flex h-full w-full min-w-0 max-w-full flex-col overflow-x-hidden bg-gray-950 sm:max-w-md sm:border-l sm:border-white/10 sm:shadow-2xl">
+
                 {/* Header */}
-                <div className="shrink-0 border-b border-white/10 bg-gray-950 px-5 py-4">
+                <div className="mx-5 mt-4 shrink-0 rounded-2xl border border-red-400/20 bg-red-400/5 px-4 py-4">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-yellow-400">
@@ -72,7 +92,9 @@ function CartPanel({ onClose }: CartPanelProps) {
                             {totalItems > 0 && (
                                 <p className="mt-1 text-sm text-gray-500">
                                     {totalItems}{" "}
-                                    {totalItems === 1 ? "item" : "items"}
+                                    {totalItems === 1
+                                        ? "item"
+                                        : "items"}
                                 </p>
                             )}
                         </div>
@@ -88,13 +110,13 @@ function CartPanel({ onClose }: CartPanelProps) {
                 </div>
 
                 {/* Cart items */}
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5">
+                <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-2 sm:px-5">
                     {cartItems.length > 0 ? (
-                        <div className="space-y-2 py-3">
+                        <div className="w-full min-w-0 space-y-3 py-3">
                             {cartItems.map((cartItem, index) => (
                                 <div
                                     key={`${cartItem.item.id}-${cartItem.selectedOption?.label ?? "default"}-${index}`}
-                                    className="rounded-2xl border border-white/10 bg-white/[0.03] px-4"
+                                    className="w-full min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] px-4"
                                 >
                                     <CartItem cartItem={cartItem} />
                                 </div>
@@ -112,8 +134,8 @@ function CartPanel({ onClose }: CartPanelProps) {
                                 </h3>
 
                                 <p className="mt-2 text-sm leading-6 text-gray-400">
-                                    Add some delicious vegetarian food to
-                                    build your order.
+                                    Add some delicious vegetarian food
+                                    to build your order.
                                 </p>
 
                                 <button
@@ -127,12 +149,14 @@ function CartPanel({ onClose }: CartPanelProps) {
                     )}
                 </div>
 
-                {/* Cart footer */}
+                {/* Footer */}
                 {cartItems.length > 0 && (
-                    <div className="shrink-0 border-t border-white/10 bg-gray-900/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-                        {/* Order summary */}
+                    <div className="max-h-[48vh] min-w-0 shrink-0 overflow-y-auto overflow-x-hidden border-t border-white/10 bg-gray-900/95 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+
+                        {/* Summary */}
                         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                             <div className="flex items-center justify-between gap-4">
+
                                 <div className="flex min-w-0 items-center gap-3">
                                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-yellow-400/10 text-lg">
                                         🏪
@@ -144,7 +168,10 @@ function CartPanel({ onClose }: CartPanelProps) {
                                         </p>
 
                                         <p className="mt-0.5 text-xs text-gray-500">
-                                            Call to confirm your order
+                                            {isOpen
+                                                ? "Call to confirm your order"
+                                                : status?.message ??
+                                                "Ordering is closed"}
                                         </p>
                                     </div>
                                 </div>
@@ -161,32 +188,62 @@ function CartPanel({ onClose }: CartPanelProps) {
                             </div>
                         </div>
 
+                        {/* Closed warning */}
+                        {!isOpen && (
+                            <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-400/5 px-4 py-4 text-center">
+                                <p className="text-sm font-bold text-red-300">
+                                    🔴 Ordering is closed
+                                </p>
+
+                                <p className="mt-1 text-xs text-gray-500">
+                                    {status?.message}
+                                </p>
+                            </div>
+                        )}
+
                         {/* Secondary actions */}
-                        <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+
+                            {/* Copy always available */}
                             <button
                                 onClick={handleCopyOrder}
                                 className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-white/10 active:scale-[0.98]"
                             >
-                                {isCopied ? "✓ Copied" : "📋 Copy Order"}
+                                {isCopied
+                                    ? "✓ Copied"
+                                    : "📋 Copy Order"}
                             </button>
 
-                            <a
-                                href={whatsappUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green-500 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-green-400 active:scale-[0.98]"
-                            >
-                                💬 WhatsApp
-                            </a>
+                            {/* WhatsApp */}
+                            {isOpen && whatsappUrl ? (
+                                <a
+                                    href={whatsappUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-green-500 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-green-400 active:scale-[0.98]"
+                                >
+                                    💬 WhatsApp
+                                </a>
+                            ) : (
+                                <span className="flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2.5 text-sm font-bold text-gray-600">
+                                    🔒 WhatsApp
+                                </span>
+                            )}
                         </div>
 
-                        {/* Primary action */}
-                        <a
-                            href={`tel:${restaurant.phone}`}
-                            className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-yellow-400 px-5 py-3.5 text-sm font-extrabold text-gray-950 shadow-lg shadow-yellow-400/10 transition hover:bg-yellow-300 active:scale-[0.98]"
-                        >
-                            📞 Call to Order
-                        </a>
+                        {/* Call */}
+                        {isOpen && restaurant?.phone ? (
+                            <a
+                                href={`tel:${restaurant.phone}`}
+                                className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-yellow-400 px-5 py-3.5 text-sm font-extrabold text-gray-950 shadow-lg shadow-yellow-400/10 transition hover:bg-yellow-300 active:scale-[0.98]"
+                            >
+                                📞 Call to Order
+                            </a>
+                        ) : (
+                            <span className="mt-4 flex min-h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-white/5 px-5 py-3.5 text-sm font-extrabold text-gray-600">
+                                🔒 Ordering Closed
+                            </span>
+                        )}
 
                         <p className="mt-2 text-center text-xs font-medium text-gray-500">
                             No delivery • Pickup from restaurant
