@@ -18,6 +18,7 @@ import ProtectedRoute from "./admin/components/ProtectedRoute";
 import AdminLayout from "./admin/components/layout/AdminLayout";
 
 import "./index.css";
+import AdminQRCode from "./admin/pages/AdminQRCode";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -35,6 +36,11 @@ createRoot(document.getElementById("root")!).render(
           path="/admin/login"
           element={<AdminLogin />}
         />
+        {/* ========================
+            Admin QRcode
+            ========================*/}
+
+        <Route path="/admin/qr" element={<AdminQRCode />} />
 
         {/* =========================
             PROTECTED ADMIN AREA
