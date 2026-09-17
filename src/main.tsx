@@ -8,9 +8,6 @@ import {
 
 import App from "./App";
 
-import ProtectedRoute from "./admin/components/ProtectedRoute";
-import AdminLayout from "./admin/components/layout/AdminLayout";
-
 import "./index.css";
 
 // Admin pages are loaded only when an admin route is visited.
@@ -36,6 +33,14 @@ const AdminSettings = lazy(
 
 const AdminQRCode = lazy(
   () => import("./admin/pages/AdminQRCode")
+);
+
+const ProtectedRoute = lazy(
+  () => import("./admin/components/ProtectedRoute")
+);
+
+const AdminLayout = lazy(
+  () => import("./admin/components/layout/AdminLayout")
 );
 
 function AdminPageLoader() {
