@@ -57,11 +57,15 @@ function CartPanel({
 
             setIsCopied(true);
 
-            setTimeout(() => {
+            window.setTimeout(() => {
                 setIsCopied(false);
             }, 2000);
         } catch (error) {
             console.error("Failed to copy order:", error);
+
+            window.alert(
+                "Copy was blocked by your browser. Please select and copy the order text manually."
+            );
         }
     }
 

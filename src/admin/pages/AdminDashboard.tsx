@@ -144,8 +144,8 @@ function AdminDashboard() {
                     {!isLoadingRestaurant && restaurant && (
                         <p
                             className={`mt-1 text-xs font-semibold ${isActive
-                                    ? "text-green-400"
-                                    : "text-red-400"
+                                ? "text-green-400"
+                                : "text-red-400"
                                 }`}
                         >
                             {isActive
@@ -167,8 +167,8 @@ function AdminDashboard() {
 
                     <p
                         className={`mt-1 text-xs font-semibold ${isActive
-                                ? "text-green-400"
-                                : "text-red-400"
+                            ? "text-green-400"
+                            : "text-red-400"
                             }`}
                     >
                         {isActive
@@ -233,64 +233,69 @@ function AdminDashboard() {
                     <div className="grid gap-3 sm:grid-cols-2">
                         {/* Manage Menu */}
                         <button
-                            onClick={() =>
-                                navigate("/admin/menu")
-                            }
+                            onClick={() => navigate("/admin/menu")}
                             className="rounded-2xl border border-white/10 bg-gray-900 p-5 text-left transition hover:border-yellow-400/30 hover:bg-gray-900/80"
                         >
-                            <span className="text-2xl">
-                                🍽️
-                            </span>
+                            <span className="text-2xl">🍽️</span>
 
                             <p className="mt-4 font-bold">
                                 Manage Menu
                             </p>
 
                             <p className="mt-1 text-sm text-gray-500">
-                                Add and update dishes, prices and
-                                availability.
+                                Add and update dishes, prices and availability.
                             </p>
                         </button>
 
                         {/* Manage Categories */}
                         <button
-                            onClick={() =>
-                                navigate("/admin/categories")
-                            }
+                            onClick={() => navigate("/admin/categories")}
                             className="rounded-2xl border border-white/10 bg-gray-900 p-5 text-left transition hover:border-yellow-400/30 hover:bg-gray-900/80"
                         >
-                            <span className="text-2xl">
-                                📁
-                            </span>
+                            <span className="text-2xl">📁</span>
 
                             <p className="mt-4 font-bold">
                                 Manage Categories
                             </p>
 
                             <p className="mt-1 text-sm text-gray-500">
-                                Organize your menu into clear
-                                sections.
+                                Organize your menu into clear sections.
+                            </p>
+                        </button>
+
+                        {/* QR Code */}
+                        <button
+                            onClick={() => navigate("/admin/qr")}
+                            className="rounded-2xl border border-yellow-400/20 bg-yellow-400/[0.04] p-5 text-left transition hover:border-yellow-400/40 hover:bg-yellow-400/[0.08]"
+                        >
+                            <span className="text-2xl">📱</span>
+
+                            <p className="mt-4 font-bold">
+                                Menu QR Code
+                            </p>
+
+                            <p className="mt-1 text-sm text-gray-500">
+                                Generate, download and print your customer menu QR code.
+                            </p>
+
+                            <p className="mt-3 text-xs font-semibold text-yellow-400">
+                                Open QR Code →
                             </p>
                         </button>
 
                         {/* Settings */}
                         <button
-                            onClick={() =>
-                                navigate("/admin/settings")
-                            }
+                            onClick={() => navigate("/admin/settings")}
                             className="rounded-2xl border border-white/10 bg-gray-900 p-5 text-left transition hover:border-yellow-400/30 hover:bg-gray-900/80"
                         >
-                            <span className="text-2xl">
-                                ⚙️
-                            </span>
+                            <span className="text-2xl">⚙️</span>
 
                             <p className="mt-4 font-bold">
                                 Restaurant Settings
                             </p>
 
                             <p className="mt-1 text-sm text-gray-500">
-                                Update restaurant information
-                                and ordering settings.
+                                Update restaurant information and ordering settings.
                             </p>
                         </button>
 
@@ -301,9 +306,7 @@ function AdminDashboard() {
                             rel="noreferrer"
                             className="rounded-2xl border border-white/10 bg-gray-900 p-5 text-left transition hover:border-yellow-400/30 hover:bg-gray-900/80"
                         >
-                            <span className="text-2xl">
-                                👀
-                            </span>
+                            <span className="text-2xl">👀</span>
 
                             <p className="mt-4 font-bold">
                                 View Customer Menu
@@ -364,8 +367,8 @@ function AdminDashboard() {
 
                             <p
                                 className={`mt-1 text-sm font-semibold ${isActive
-                                        ? "text-green-400"
-                                        : "text-red-400"
+                                    ? "text-green-400"
+                                    : "text-red-400"
                                     }`}
                             >
                                 {isActive

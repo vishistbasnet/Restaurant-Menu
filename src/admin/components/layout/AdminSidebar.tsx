@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 
 import { getRestaurantSettings } from "../../services/settingsAdminService";
+import {
+    LayoutDashboard,
+    FolderOpen,
+    UtensilsCrossed,
+    Settings,
+    QrCode,
+} from "lucide-react";
 
 interface AdminSidebarProps {
     isOpen: boolean;
@@ -18,22 +25,27 @@ const navigation = [
     {
         label: "Dashboard",
         path: "/admin",
-        icon: "⌂",
+        icon: LayoutDashboard,
     },
     {
         label: "Categories",
         path: "/admin/categories",
-        icon: "▦",
+        icon: FolderOpen,
     },
     {
         label: "Menu Items",
         path: "/admin/menu",
-        icon: "☰",
+        icon: UtensilsCrossed,
     },
     {
         label: "Restaurant",
         path: "/admin/settings",
-        icon: "⚙",
+        icon: Settings,
+    },
+    {
+        label: "QR Code",
+        path: "/admin/qr",
+        icon: QrCode,
     },
 ];
 
@@ -163,8 +175,8 @@ function AdminSidebar({
                                     }`
                                 }
                             >
-                                <span className="flex h-7 w-7 shrink-0 items-center justify-center text-lg">
-                                    {item.icon}
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center">
+                                    <item.icon className="h-5 w-5" />
                                 </span>
 
                                 <span>

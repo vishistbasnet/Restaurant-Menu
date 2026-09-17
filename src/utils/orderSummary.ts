@@ -145,9 +145,40 @@ export function formatOrderSummary(
 export async function copyOrderSummary(
     orderSummary: string
 ): Promise<void> {
-    await navigator.clipboard.writeText(orderSummary);
-}
+    // Try the modern Clipboard API first.
+    if (
+        typeof navigator !== "undefined" &&
+        navigator.clipboard &&
+        window.isSecureContext
+    ) {
+        await navigator.clipboard.writeText(orderSummary);
+        return;
+    }
 
+    // Mobile / non-HTTPS fallback.
+    const textarea = document.createElement("textarea");
+
+    textarea.value = orderSummary;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    textarea.style.top = "0";
+    textarea.style.opacity = "0";
+
+    document.body.appendChild(textarea);
+
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    const copied = document.execCommand("copy");
+
+    document.body.removeChild(textarea);
+
+    if (!copied) {
+        throw new Error("Unable to copy order summary.");
+    }
+}
 export function createWhatsAppOrderUrl(
     phone: string,
     orderSummary: string

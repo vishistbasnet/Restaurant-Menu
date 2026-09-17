@@ -13,19 +13,60 @@ import {
 function AdminQRCode() {
     const [copied, setCopied] = useState(false);
 
+    const configuredMenuUrl =
+        import.meta.env.VITE_PUBLIC_MENU_URL?.trim();
+
     const menuUrl = useMemo(() => {
+        if (configuredMenuUrl) {
+            return configuredMenuUrl;
+        }
+
         return `${window.location.origin}/`;
-    }, []);
+    }, [configuredMenuUrl]);
+
+    const isProductionUrl =
+        Boolean(configuredMenuUrl) &&
+        !configuredMenuUrl.includes("localhost") &&
+        !configuredMenuUrl.includes("127.0.0.1");
 
     async function handleCopy() {
         try {
-            await navigator.clipboard.writeText(menuUrl);
+            if (
+                navigator.clipboard &&
+                window.isSecureContext
+            ) {
+                await navigator.clipboard.writeText(menuUrl);
+            } else {
+                const textarea =
+                    document.createElement("textarea");
+
+                textarea.value = menuUrl;
+                textarea.style.position = "fixed";
+                textarea.style.left = "-9999px";
+                textarea.style.top = "0";
+
+                document.body.appendChild(textarea);
+
+                textarea.focus();
+                textarea.select();
+
+                const copiedSuccessfully =
+                    document.execCommand("copy");
+
+                document.body.removeChild(textarea);
+
+                if (!copiedSuccessfully) {
+                    throw new Error("Copy failed");
+                }
+            }
+
             setCopied(true);
 
             window.setTimeout(() => {
                 setCopied(false);
             }, 2000);
-        } catch {
+        } catch (error) {
+            console.error("Failed to copy menu URL:", error);
             setCopied(false);
         }
     }
@@ -35,9 +76,12 @@ function AdminQRCode() {
             "meal-deal-qr"
         ) as HTMLCanvasElement | null;
 
-        if (!canvas) return;
+        if (!canvas) {
+            return;
+        }
 
         const link = document.createElement("a");
+
         link.download = "meal-and-deal-menu-qr.png";
         link.href = canvas.toDataURL("image/png");
         link.click();
@@ -50,6 +94,7 @@ function AdminQRCode() {
     return (
         <div className="min-h-full bg-gray-950 text-white">
             <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+
                 {/* Header */}
                 <div className="mb-8">
                     <div className="flex items-center gap-3">
@@ -69,8 +114,24 @@ function AdminQRCode() {
                     </div>
                 </div>
 
+                {/* Production warning */}
+                {!isProductionUrl && (
+                    <div className="mb-6 rounded-2xl border border-yellow-400/20 bg-yellow-400/[0.05] px-4 py-4">
+                        <p className="text-sm font-bold text-yellow-400">
+                            Development QR
+                        </p>
+
+                        <p className="mt-1 text-sm leading-6 text-gray-400">
+                            This QR currently uses your development URL.
+                            Do not print this QR permanently until your
+                            production menu URL is configured.
+                        </p>
+                    </div>
+                )}
+
                 {/* Main content */}
                 <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+
                     {/* QR Preview */}
                     <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 sm:p-7">
                         <div className="mb-6">
@@ -115,6 +176,7 @@ function AdminQRCode() {
 
                     {/* Details */}
                     <section className="space-y-6">
+
                         {/* URL */}
                         <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 sm:p-7">
                             <p className="text-xs font-bold uppercase tracking-[0.18em] text-yellow-400">
@@ -217,9 +279,11 @@ function AdminQRCode() {
                 {/* Information */}
                 <div className="mt-6 rounded-2xl border border-yellow-400/10 bg-yellow-400/[0.04] p-4">
                     <p className="text-sm leading-6 text-gray-400">
-                        <span className="font-bold text-yellow-400">Tip:</span>{" "}
-                        Print this QR code and place it on your restaurant counter,
-                        tables, entrance, or promotional material.
+                        <span className="font-bold text-yellow-400">
+                            Tip:
+                        </span>{" "}
+                        Print this QR code and place it on your restaurant
+                        counter, tables, entrance, or promotional material.
                     </p>
                 </div>
             </div>
@@ -227,24 +291,24 @@ function AdminQRCode() {
             {/* Print styles */}
             <style>
                 {`
-          @media print {
-            body * {
-              visibility: hidden;
-            }
+                    @media print {
+                        body * {
+                            visibility: hidden;
+                        }
 
-            #qr-print-area,
-            #qr-print-area * {
-              visibility: visible;
-            }
+                        #qr-print-area,
+                        #qr-print-area * {
+                            visibility: visible;
+                        }
 
-            #qr-print-area {
-              position: absolute;
-              left: 50%;
-              top: 50%;
-              transform: translate(-50%, -50%);
-            }
-          }
-        `}
+                        #qr-print-area {
+                            position: absolute;
+                            left: 50%;
+                            top: 50%;
+                            transform: translate(-50%, -50%);
+                        }
+                    }
+                `}
             </style>
         </div>
     );

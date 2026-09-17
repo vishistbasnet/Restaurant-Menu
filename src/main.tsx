@@ -36,12 +36,6 @@ createRoot(document.getElementById("root")!).render(
           path="/admin/login"
           element={<AdminLogin />}
         />
-        {/* ========================
-            Admin QRcode
-            ========================*/}
-
-        <Route path="/admin/qr" element={<AdminQRCode />} />
-
         {/* =========================
             PROTECTED ADMIN AREA
         ========================== */}
@@ -65,6 +59,10 @@ createRoot(document.getElementById("root")!).render(
             <Route
               path="/admin/settings"
               element={<AdminSettings />}
+            />
+            <Route
+              path="/admin/qr"
+              element={<AdminQRCode />}
             />
           </Route>
         </Route>
