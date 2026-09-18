@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -7,10 +7,7 @@ const corsHeaders = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function jsonResponse(
-    body: unknown,
-    status: number,
-) {
+function jsonResponse(body: unknown, status: number) {
     return new Response(JSON.stringify(body), {
         status,
         headers: {
@@ -62,10 +59,7 @@ Deno.serve(async (req) => {
         }
 
         /*
-         * Client representing the currently authenticated requester.
-         *
-         * The JWT is passed through so auth.uid() inside
-         * is_super_admin() refers to the requester.
+         * Client using the requesting user's JWT.
          */
         const userClient = createClient(
             supabaseUrl,
@@ -79,6 +73,9 @@ Deno.serve(async (req) => {
             },
         );
 
+        /*
+         * Verify requester.
+         */
         const {
             data: { user: requester },
             error: requesterError,
@@ -92,13 +89,7 @@ Deno.serve(async (req) => {
         }
 
         /*
-         * Your database function is:
-         *
-         * is_super_admin()
-         *
-         * It uses auth.uid() internally and checks:
-         * role = 'super_admin'
-         * is_active = true
+         * Verify requester is an active Super Admin.
          */
         const {
             data: isSuperAdmin,
@@ -112,7 +103,10 @@ Deno.serve(async (req) => {
             );
 
             return jsonResponse(
-                { error: "Unable to verify administrator permissions" },
+                {
+                    error:
+                        "Unable to verify administrator permissions",
+                },
                 500,
             );
         }
@@ -149,6 +143,10 @@ Deno.serve(async (req) => {
                 ? body.role.trim()
                 : "";
 
+        /*
+         * Only Admin and Staff accounts can be
+         * created from User Management.
+         */
         if (
             !email ||
             !password ||
@@ -164,14 +162,11 @@ Deno.serve(async (req) => {
             );
         }
 
-        if (
-            !["super_admin", "admin", "staff"].includes(
-                role,
-            )
-        ) {
+        if (!["admin", "staff"].includes(role)) {
             return jsonResponse(
                 {
-                    error: "Invalid role",
+                    error:
+                        "Only admin or staff accounts can be created",
                 },
                 400,
             );
@@ -190,7 +185,7 @@ Deno.serve(async (req) => {
         /*
          * Service-role client.
          *
-         * NEVER expose this key to the React application.
+         * This key NEVER goes to the React application.
          */
         const adminClient = createClient(
             supabaseUrl,
@@ -198,8 +193,7 @@ Deno.serve(async (req) => {
         );
 
         /*
-         * Verify that the restaurant exists before creating
-         * the Auth account.
+         * Verify restaurant.
          */
         const {
             data: restaurant,
@@ -217,20 +211,25 @@ Deno.serve(async (req) => {
             );
 
             return jsonResponse(
-                { error: "Unable to verify restaurant" },
+                {
+                    error:
+                        "Unable to verify restaurant",
+                },
                 500,
             );
         }
 
         if (!restaurant) {
             return jsonResponse(
-                { error: "Restaurant not found" },
+                {
+                    error: "Restaurant not found",
+                },
                 400,
             );
         }
 
         /*
-         * Create the Supabase Auth account.
+         * Create Auth account.
          */
         const {
             data: createdUser,
@@ -258,7 +257,7 @@ Deno.serve(async (req) => {
         }
 
         /*
-         * Add authorization record.
+         * Create authorization record.
          */
         const { error: insertError } =
             await adminClient
@@ -271,8 +270,8 @@ Deno.serve(async (req) => {
                 });
 
         /*
-         * Roll back the Auth account if the
-         * admin_users insert fails.
+         * Roll back Auth account if database
+         * authorization record cannot be created.
          */
         if (insertError) {
             console.error(
