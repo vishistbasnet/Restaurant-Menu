@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { supabase } from "../../../lib/supabase";
 
+import { supabase } from "../../../lib/supabase";
 import { getRestaurantSettings } from "../../services/settingsAdminService";
 
 import {
@@ -20,12 +20,17 @@ interface AdminSidebarProps {
 }
 
 interface SidebarStatus {
-    isActive: boolean;
-    openingTime: string;
-    closingTime: string;
+    id: string;
+    name: string;
+    is_active: boolean;
+    opening_time: string;
+    closing_time: string;
 }
 
-type AdminRole = "super_admin" | "admin" | "staff";
+type AdminRole =
+    | "super_admin"
+    | "admin"
+    | "staff";
 
 interface NavigationItem {
     label: string;
@@ -39,31 +44,49 @@ const navigation: NavigationItem[] = [
         label: "Dashboard",
         path: "/admin",
         icon: LayoutDashboard,
-        allowedRoles: ["super_admin", "admin", "staff"],
+        allowedRoles: [
+            "super_admin",
+            "admin",
+            "staff",
+        ],
     },
     {
         label: "Categories",
         path: "/admin/categories",
         icon: FolderOpen,
-        allowedRoles: ["super_admin", "admin", "staff"],
+        allowedRoles: [
+            "super_admin",
+            "admin",
+            "staff",
+        ],
     },
     {
         label: "Menu Items",
         path: "/admin/menu",
         icon: UtensilsCrossed,
-        allowedRoles: ["super_admin", "admin", "staff"],
+        allowedRoles: [
+            "super_admin",
+            "admin",
+            "staff",
+        ],
     },
     {
         label: "Restaurant",
         path: "/admin/settings",
         icon: Settings,
-        allowedRoles: ["super_admin", "admin"],
+        allowedRoles: [
+            "super_admin",
+            "admin",
+        ],
     },
     {
         label: "QR Code",
         path: "/admin/qr",
         icon: QrCode,
-        allowedRoles: ["super_admin", "admin"],
+        allowedRoles: [
+            "super_admin",
+            "admin",
+        ],
     },
     {
         label: "User Management",
@@ -80,10 +103,17 @@ const navigation: NavigationItem[] = [
 ];
 
 function formatTime(time: string): string {
-    const [hours, minutes] = time.split(":").map(Number);
+    const [hours, minutes] =
+        time.split(":").map(Number);
 
     const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
+
+    date.setHours(
+        hours,
+        minutes,
+        0,
+        0
+    );
 
     return date.toLocaleTimeString([], {
         hour: "numeric",
@@ -141,20 +171,21 @@ function AdminSidebar({
                     );
                 }
 
+                const userRole =
+                    (adminUser?.role as AdminRole) ??
+                    null;
+
                 if (isMounted) {
-                    setRole(
-                        (adminUser?.role as AdminRole) ?? null
-                    );
+                    setRole(userRole);
                 }
 
                 /*
-                 * Staff users should not need restaurant settings.
-                 * The status card is therefore only loaded for
-                 * admin and super_admin users.
+                 * Staff users do not need restaurant
+                 * status information.
                  */
                 if (
-                    adminUser?.role !== "admin" &&
-                    adminUser?.role !== "super_admin"
+                    userRole !== "admin" &&
+                    userRole !== "super_admin"
                 ) {
                     if (isMounted) {
                         setStatus(null);
@@ -172,15 +203,24 @@ function AdminSidebar({
                 }
 
                 setStatus({
-                    isActive: restaurant.is_active,
-                    openingTime: restaurant.opening_time,
-                    closingTime: restaurant.closing_time,
+                    id: restaurant.id,
+                    name: restaurant.name,
+                    is_active:
+                        restaurant.is_active,
+                    opening_time:
+                        restaurant.opening_time,
+                    closing_time:
+                        restaurant.closing_time,
                 });
             } catch (error) {
                 console.error(
                     "Failed to load sidebar:",
                     error
                 );
+
+                if (isMounted) {
+                    setStatus(null);
+                }
             } finally {
                 if (isMounted) {
                     setIsLoadingStatus(false);
@@ -190,10 +230,16 @@ function AdminSidebar({
 
         void loadSidebarData();
 
-        const interval = window.setInterval(
-            loadSidebarData,
-            30000
-        );
+        /*
+         * Refresh restaurant status every 30 seconds.
+         */
+        const interval =
+            window.setInterval(
+                () => {
+                    void loadSidebarData();
+                },
+                30000
+            );
 
         return () => {
             isMounted = false;
@@ -202,13 +248,15 @@ function AdminSidebar({
     }, []);
 
     const isRestaurantActive =
-        status?.isActive ?? false;
+        status?.is_active ?? false;
 
     const visibleNavigation =
         role === null
             ? []
             : navigation.filter((item) =>
-                item.allowedRoles.includes(role)
+                item.allowedRoles.includes(
+                    role
+                )
             );
 
     return (
@@ -225,8 +273,8 @@ function AdminSidebar({
 
             <aside
                 className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col border-r border-white/10 bg-gray-950 transition-transform duration-300 lg:sticky lg:top-0 lg:z-40 lg:translate-x-0 ${isOpen
-                    ? "translate-x-0"
-                    : "-translate-x-full"
+                        ? "translate-x-0"
+                        : "-translate-x-full"
                     }`}
             >
                 {/* Brand */}
@@ -242,11 +290,14 @@ function AdminSidebar({
                             </p>
 
                             <p className="text-xs text-gray-500">
-                                {role === "super_admin"
+                                {role ===
+                                    "super_admin"
                                     ? "Super Admin Panel"
-                                    : role === "admin"
+                                    : role ===
+                                        "admin"
                                         ? "Admin Panel"
-                                        : role === "staff"
+                                        : role ===
+                                            "staff"
                                             ? "Staff Panel"
                                             : "Admin Panel"}
                             </p>
@@ -261,34 +312,48 @@ function AdminSidebar({
                     </p>
 
                     <div className="space-y-2">
-                        {visibleNavigation.map((item) => {
-                            const Icon = item.icon;
+                        {visibleNavigation.map(
+                            (item) => {
+                                const Icon =
+                                    item.icon;
 
-                            return (
-                                <NavLink
-                                    key={item.path}
-                                    to={item.path}
-                                    end={
-                                        item.path === "/admin"
-                                    }
-                                    onClick={onClose}
-                                    className={({ isActive }) =>
-                                        `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${isActive
-                                            ? "bg-yellow-400 text-gray-950"
-                                            : "text-gray-400 hover:bg-white/5 hover:text-white"
-                                        }`
-                                    }
-                                >
-                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center">
-                                        <Icon className="h-5 w-5" />
-                                    </span>
+                                return (
+                                    <NavLink
+                                        key={
+                                            item.path
+                                        }
+                                        to={
+                                            item.path
+                                        }
+                                        end={
+                                            item.path ===
+                                            "/admin"
+                                        }
+                                        onClick={
+                                            onClose
+                                        }
+                                        className={({
+                                            isActive,
+                                        }) =>
+                                            `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${isActive
+                                                ? "bg-yellow-400 text-gray-950"
+                                                : "text-gray-400 hover:bg-white/5 hover:text-white"
+                                            }`
+                                        }
+                                    >
+                                        <span className="flex h-7 w-7 shrink-0 items-center justify-center">
+                                            <Icon className="h-5 w-5" />
+                                        </span>
 
-                                    <span>
-                                        {item.label}
-                                    </span>
-                                </NavLink>
-                            );
-                        })}
+                                        <span>
+                                            {
+                                                item.label
+                                            }
+                                        </span>
+                                    </NavLink>
+                                );
+                            }
+                        )}
                     </div>
                 </nav>
 
@@ -298,20 +363,21 @@ function AdminSidebar({
                         <div className="mt-auto shrink-0 border-t border-white/10 bg-gray-950 p-4">
                             <div
                                 className={`rounded-2xl border p-4 ${isRestaurantActive
-                                    ? "border-green-400/10 bg-green-400/[0.04]"
-                                    : "border-red-400/10 bg-red-400/[0.04]"
+                                        ? "border-green-400/10 bg-green-400/[0.04]"
+                                        : "border-red-400/10 bg-red-400/[0.04]"
                                     }`}
                             >
                                 <div className="flex items-center justify-between gap-3">
                                     <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                                        Restaurant Status
+                                        Restaurant
+                                        Status
                                     </p>
 
                                     {!isLoadingStatus && (
                                         <span
                                             className={`h-2 w-2 rounded-full ${isRestaurantActive
-                                                ? "bg-green-400"
-                                                : "bg-red-400"
+                                                    ? "bg-green-400"
+                                                    : "bg-red-400"
                                                 }`}
                                         />
                                     )}
@@ -319,14 +385,15 @@ function AdminSidebar({
 
                                 {isLoadingStatus ? (
                                     <p className="mt-3 text-sm font-semibold text-gray-500">
-                                        Loading status...
+                                        Loading
+                                        status...
                                     </p>
                                 ) : (
                                     <div className="mt-3">
                                         <p
                                             className={`text-sm font-bold ${isRestaurantActive
-                                                ? "text-green-400"
-                                                : "text-red-400"
+                                                    ? "text-green-400"
+                                                    : "text-red-400"
                                                 }`}
                                         >
                                             {isRestaurantActive
@@ -338,12 +405,12 @@ function AdminSidebar({
                                             <p className="mt-1 text-xs text-gray-500">
                                                 {isRestaurantActive
                                                     ? `Open ${formatTime(
-                                                        status.openingTime
+                                                        status.opening_time
                                                     )} – ${formatTime(
-                                                        status.closingTime
+                                                        status.closing_time
                                                     )}`
                                                     : `Opens at ${formatTime(
-                                                        status.openingTime
+                                                        status.opening_time
                                                     )}`}
                                             </p>
                                         )}

@@ -1,4 +1,5 @@
 export interface PriceOption {
+    id?: string;
     label: string;
     price: number | null;
 }
@@ -8,7 +9,7 @@ export interface MenuItem {
     name: string;
     category: string;
     description?: string;
-    isVeg: true;
+    isVeg: boolean;
 
     pricing:
     | {
@@ -24,8 +25,5 @@ export interface MenuItem {
 export interface CartItem {
     item: MenuItem;
     quantity: number;
-
-    // Selected option for items with multiple prices.
-    // Example: Half / Full
     selectedOption?: PriceOption;
 }

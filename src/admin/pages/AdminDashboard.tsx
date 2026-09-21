@@ -13,13 +13,18 @@ interface RestaurantData {
 function AdminDashboard() {
     const navigate = useNavigate();
 
-    const [email, setEmail] = useState("");
+    const [email, setEmail] =
+        useState("");
+
     const [restaurant, setRestaurant] =
         useState<RestaurantData | null>(null);
+
     const [isLoadingRestaurant, setIsLoadingRestaurant] =
         useState(true);
 
     useEffect(() => {
+        let isMounted = true;
+
         async function loadDashboard() {
             try {
                 setIsLoadingRestaurant(true);
@@ -28,7 +33,7 @@ function AdminDashboard() {
                     data: { user },
                 } = await supabase.auth.getUser();
 
-                if (user?.email) {
+                if (user?.email && isMounted) {
                     setEmail(user.email);
                 }
 
@@ -37,14 +42,17 @@ function AdminDashboard() {
                 }
 
                 /*
-                 * Find the restaurant assigned to this admin.
+                 * Find the restaurant assigned
+                 * to this admin.
                  */
-                const { data: adminData, error: adminError } =
-                    await supabase
-                        .from("admin_users")
-                        .select("restaurant_id")
-                        .eq("user_id", user.id)
-                        .maybeSingle();
+                const {
+                    data: adminData,
+                    error: adminError,
+                } = await supabase
+                    .from("admin_users")
+                    .select("restaurant_id")
+                    .eq("user_id", user.id)
+                    .maybeSingle();
 
                 if (adminError) {
                     throw new Error(
@@ -52,26 +60,32 @@ function AdminDashboard() {
                     );
                 }
 
-                if (!adminData) {
+                if (!adminData?.restaurant_id) {
                     throw new Error(
                         "No restaurant is assigned to this admin account."
                     );
                 }
 
                 /*
-                 * Load the current restaurant status.
+                 * Load the current restaurant.
                  *
-                 * This is the same is_active value changed
-                 * from Restaurant Settings.
+                 * IMPORTANT:
+                 * We use the database is_active value
+                 * directly for the admin dashboard.
                  */
-                const { data: restaurantData, error: restaurantError } =
-                    await supabase
-                        .from("restaurants")
-                        .select(
-                            "id, name, is_active, order_type"
-                        )
-                        .eq("id", adminData.restaurant_id)
-                        .single();
+                const {
+                    data: restaurantData,
+                    error: restaurantError,
+                } = await supabase
+                    .from("restaurants")
+                    .select(
+                        "id, name, is_active, order_type"
+                    )
+                    .eq(
+                        "id",
+                        adminData.restaurant_id
+                    )
+                    .single();
 
                 if (restaurantError) {
                     throw new Error(
@@ -79,15 +93,30 @@ function AdminDashboard() {
                     );
                 }
 
-                setRestaurant(restaurantData as RestaurantData);
+                if (isMounted) {
+                    setRestaurant(
+                        restaurantData as RestaurantData
+                    );
+                }
             } catch (error) {
-                console.error("Failed to load dashboard:", error);
+                console.error(
+                    "Failed to load dashboard:",
+                    error
+                );
             } finally {
-                setIsLoadingRestaurant(false);
+                if (isMounted) {
+                    setIsLoadingRestaurant(
+                        false
+                    );
+                }
             }
         }
 
-        loadDashboard();
+        void loadDashboard();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     async function handleLogout() {
@@ -98,7 +127,8 @@ function AdminDashboard() {
         });
     }
 
-    const isActive = restaurant?.is_active ?? false;
+    const isActive =
+        restaurant?.is_active ?? false;
 
     return (
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -114,8 +144,10 @@ function AdminDashboard() {
                     </h1>
 
                     <p className="mt-2 text-sm text-gray-500">
-                        Here's what's happening with{" "}
-                        {restaurant?.name ?? "your restaurant"}.
+                        Here's what's happening
+                        with{" "}
+                        {restaurant?.name ??
+                            "your restaurant"}.
                     </p>
                 </div>
 
@@ -138,21 +170,23 @@ function AdminDashboard() {
                     <p className="mt-2 text-xl font-black">
                         {isLoadingRestaurant
                             ? "Loading..."
-                            : restaurant?.name ?? "Unknown"}
+                            : restaurant?.name ??
+                            "Unknown"}
                     </p>
 
-                    {!isLoadingRestaurant && restaurant && (
-                        <p
-                            className={`mt-1 text-xs font-semibold ${isActive
-                                ? "text-green-400"
-                                : "text-red-400"
-                                }`}
-                        >
-                            {isActive
-                                ? "● Active"
-                                : "● Closed"}
-                        </p>
-                    )}
+                    {!isLoadingRestaurant &&
+                        restaurant && (
+                            <p
+                                className={`mt-1 text-xs font-semibold ${isActive
+                                        ? "text-green-400"
+                                        : "text-red-400"
+                                    }`}
+                            >
+                                {isActive
+                                    ? "● Active"
+                                    : "● Closed"}
+                            </p>
+                        )}
                 </div>
 
                 {/* Ordering */}
@@ -167,8 +201,8 @@ function AdminDashboard() {
 
                     <p
                         className={`mt-1 text-xs font-semibold ${isActive
-                            ? "text-green-400"
-                            : "text-red-400"
+                                ? "text-green-400"
+                                : "text-red-400"
                             }`}
                     >
                         {isActive
@@ -188,7 +222,11 @@ function AdminDashboard() {
                     </p>
 
                     <button
-                        onClick={() => navigate("/admin/menu")}
+                        onClick={() =>
+                            navigate(
+                                "/admin/menu"
+                            )
+                        }
                         className="mt-2 text-xs font-semibold text-yellow-400 hover:underline"
                     >
                         Open menu →
@@ -207,7 +245,9 @@ function AdminDashboard() {
 
                     <button
                         onClick={() =>
-                            navigate("/admin/categories")
+                            navigate(
+                                "/admin/categories"
+                            )
                         }
                         className="mt-2 text-xs font-semibold text-yellow-400 hover:underline"
                     >
@@ -226,56 +266,85 @@ function AdminDashboard() {
                         </p>
 
                         <h2 className="mt-1 text-xl font-black">
-                            Manage your restaurant
+                            Manage your
+                            restaurant
                         </h2>
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
                         {/* Manage Menu */}
                         <button
-                            onClick={() => navigate("/admin/menu")}
+                            onClick={() =>
+                                navigate(
+                                    "/admin/menu"
+                                )
+                            }
                             className="rounded-2xl border border-white/10 bg-gray-900 p-5 text-left transition hover:border-yellow-400/30 hover:bg-gray-900/80"
                         >
-                            <span className="text-2xl">🍽️</span>
+                            <span className="text-2xl">
+                                🍽️
+                            </span>
 
                             <p className="mt-4 font-bold">
                                 Manage Menu
                             </p>
 
                             <p className="mt-1 text-sm text-gray-500">
-                                Add and update dishes, prices and availability.
+                                Add and update
+                                dishes, prices
+                                and
+                                availability.
                             </p>
                         </button>
 
-                        {/* Manage Categories */}
+                        {/* Categories */}
                         <button
-                            onClick={() => navigate("/admin/categories")}
+                            onClick={() =>
+                                navigate(
+                                    "/admin/categories"
+                                )
+                            }
                             className="rounded-2xl border border-white/10 bg-gray-900 p-5 text-left transition hover:border-yellow-400/30 hover:bg-gray-900/80"
                         >
-                            <span className="text-2xl">📁</span>
+                            <span className="text-2xl">
+                                📂
+                            </span>
 
                             <p className="mt-4 font-bold">
-                                Manage Categories
+                                Manage
+                                Categories
                             </p>
 
                             <p className="mt-1 text-sm text-gray-500">
-                                Organize your menu into clear sections.
+                                Organize your
+                                menu into clear
+                                sections.
                             </p>
                         </button>
 
                         {/* QR Code */}
                         <button
-                            onClick={() => navigate("/admin/qr")}
+                            onClick={() =>
+                                navigate(
+                                    "/admin/qr"
+                                )
+                            }
                             className="rounded-2xl border border-yellow-400/20 bg-yellow-400/[0.04] p-5 text-left transition hover:border-yellow-400/40 hover:bg-yellow-400/[0.08]"
                         >
-                            <span className="text-2xl">📱</span>
+                            <span className="text-2xl">
+                                📱
+                            </span>
 
                             <p className="mt-4 font-bold">
                                 Menu QR Code
                             </p>
 
                             <p className="mt-1 text-sm text-gray-500">
-                                Generate, download and print your customer menu QR code.
+                                Generate,
+                                download and
+                                print your
+                                customer menu
+                                QR code.
                             </p>
 
                             <p className="mt-3 text-xs font-semibold text-yellow-400">
@@ -285,17 +354,28 @@ function AdminDashboard() {
 
                         {/* Settings */}
                         <button
-                            onClick={() => navigate("/admin/settings")}
+                            onClick={() =>
+                                navigate(
+                                    "/admin/settings"
+                                )
+                            }
                             className="rounded-2xl border border-white/10 bg-gray-900 p-5 text-left transition hover:border-yellow-400/30 hover:bg-gray-900/80"
                         >
-                            <span className="text-2xl">⚙️</span>
+                            <span className="text-2xl">
+                                ⚙️
+                            </span>
 
                             <p className="mt-4 font-bold">
-                                Restaurant Settings
+                                Restaurant
+                                Settings
                             </p>
 
                             <p className="mt-1 text-sm text-gray-500">
-                                Update restaurant information and ordering settings.
+                                Update
+                                restaurant
+                                information and
+                                ordering
+                                settings.
                             </p>
                         </button>
 
@@ -306,14 +386,18 @@ function AdminDashboard() {
                             rel="noreferrer"
                             className="rounded-2xl border border-white/10 bg-gray-900 p-5 text-left transition hover:border-yellow-400/30 hover:bg-gray-900/80"
                         >
-                            <span className="text-2xl">👀</span>
+                            <span className="text-2xl">
+                                👀
+                            </span>
 
                             <p className="mt-4 font-bold">
-                                View Customer Menu
+                                View Customer
+                                Menu
                             </p>
 
                             <p className="mt-1 text-sm text-gray-500">
-                                Preview what customers see.
+                                Preview what
+                                customers see.
                             </p>
                         </a>
                     </div>
@@ -336,7 +420,8 @@ function AdminDashboard() {
                             </p>
 
                             <p className="mt-1 break-all text-sm text-gray-300">
-                                {email || "Loading..."}
+                                {email ||
+                                    "Loading..."}
                             </p>
                         </div>
 
@@ -346,7 +431,8 @@ function AdminDashboard() {
                             </p>
 
                             <p className="mt-1 text-sm font-semibold text-green-400">
-                                ✓ Authorized Administrator
+                                ✓ Authorized
+                                Administrator
                             </p>
                         </div>
 
@@ -367,8 +453,8 @@ function AdminDashboard() {
 
                             <p
                                 className={`mt-1 text-sm font-semibold ${isActive
-                                    ? "text-green-400"
-                                    : "text-red-400"
+                                        ? "text-green-400"
+                                        : "text-red-400"
                                     }`}
                             >
                                 {isActive

@@ -3,6 +3,8 @@ import {
     useEffect,
     useState,
 } from "react";
+import type { FormEvent } from "react";
+
 import {
     Check,
     Edit3,
@@ -13,6 +15,12 @@ import {
     X,
 } from "lucide-react";
 
+import {
+    FunctionsFetchError,
+    FunctionsHttpError,
+    FunctionsRelayError,
+} from "@supabase/supabase-js";
+
 import { supabase } from "../../lib/supabase";
 
 interface Restaurant {
@@ -21,12 +29,12 @@ interface Restaurant {
 }
 
 interface AdminUser {
+    id: string;
     user_id: string;
+    email: string | null;
     restaurant_id: string;
-    role:
-    | "super_admin"
-    | "admin"
-    | "staff";
+    restaurant_name: string | null;
+    role: "super_admin" | "admin" | "staff";
     is_active: boolean;
     created_at: string;
 }
@@ -34,18 +42,11 @@ interface AdminUser {
 type EditableRole = "admin" | "staff";
 
 function AdminUsers() {
-    const [users, setUsers] = useState<
-        AdminUser[]
-    >([]);
+    const [users, setUsers] = useState<AdminUser[]>([]);
+    const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
 
-    const [restaurants, setRestaurants] =
-        useState<Restaurant[]>([]);
-
-    const [isLoading, setIsLoading] =
-        useState(true);
-
-    const [isCreating, setIsCreating] =
-        useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isCreating, setIsCreating] = useState(false);
 
     const [processingUserId, setProcessingUserId] =
         useState<string | null>(null);
@@ -56,22 +57,15 @@ function AdminUsers() {
     const [editingUser, setEditingUser] =
         useState<AdminUser | null>(null);
 
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [restaurantId, setRestaurantId] = useState("");
+    const [role, setRole] = useState<EditableRole>("admin");
+
     const [editRestaurantId, setEditRestaurantId] =
         useState("");
 
     const [editRole, setEditRole] =
-        useState<EditableRole>("admin");
-
-    const [email, setEmail] =
-        useState("");
-
-    const [password, setPassword] =
-        useState("");
-
-    const [restaurantId, setRestaurantId] =
-        useState("");
-
-    const [role, setRole] =
         useState<EditableRole>("admin");
 
     const [error, setError] =
@@ -80,83 +74,95 @@ function AdminUsers() {
     const [success, setSuccess] =
         useState<string | null>(null);
 
-    /*
-     * Load users and restaurants.
-     */
-    const loadData = useCallback(
-        async () => {
-            try {
-                setIsLoading(true);
-                setError(null);
-
-                const [
-                    {
-                        data: userData,
-                        error: userError,
-                    },
-                    {
-                        data: restaurantData,
-                        error: restaurantError,
-                    },
-                ] = await Promise.all([
-                    supabase
-                        .from("admin_users")
-                        .select(
-                            "user_id, restaurant_id, role, is_active, created_at",
-                        )
-                        .order(
-                            "created_at",
-                            {
-                                ascending:
-                                    false,
-                            },
-                        ),
-
-                    supabase
-                        .from("restaurants")
-                        .select(
-                            "id, name",
-                        )
-                        .order("name"),
-                ]);
-
-                if (userError) {
-                    throw new Error(
-                        userError.message,
-                    );
-                }
-
-                if (
-                    restaurantError
-                ) {
-                    throw new Error(
-                        restaurantError.message,
-                    );
-                }
-
-                setUsers(
-                    userData ?? [],
-                );
-
-                setRestaurants(
-                    restaurantData ?? [],
-                );
-            } catch (err) {
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : "Failed to load users.",
-                );
-            } finally {
-                setIsLoading(false);
-            }
-        },
-        [],
-    );
+    const clearMessages = () => {
+        setError(null);
+        setSuccess(null);
+    };
 
     /*
-     * Initial load.
+     * ---------------------------------------------------------
+     * LOAD ADMIN USERS
+     * ---------------------------------------------------------
      */
+
+    const loadAdminUsers = useCallback(async () => {
+        const {
+            data,
+            error: rpcError,
+        } = await supabase.rpc(
+            "get_admin_users_for_super_admin"
+        );
+
+        if (rpcError) {
+            throw new Error(rpcError.message);
+        }
+
+        setUsers(
+            (data ?? []) as AdminUser[]
+        );
+    }, []);
+
+    /*
+     * ---------------------------------------------------------
+     * LOAD RESTAURANTS
+     * ---------------------------------------------------------
+     */
+
+    const loadRestaurants = useCallback(async () => {
+        const {
+            data,
+            error: restaurantError,
+        } = await supabase
+            .from("restaurants")
+            .select("id, name")
+            .order("name");
+
+        if (restaurantError) {
+            throw new Error(
+                restaurantError.message
+            );
+        }
+
+        setRestaurants(
+            (data ?? []) as Restaurant[]
+        );
+    }, []);
+
+    /*
+     * ---------------------------------------------------------
+     * LOAD EVERYTHING
+     * ---------------------------------------------------------
+     */
+
+    const loadData = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            setError(null);
+
+            await Promise.all([
+                loadAdminUsers(),
+                loadRestaurants(),
+            ]);
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Failed to load administrator accounts."
+            );
+        } finally {
+            setIsLoading(false);
+        }
+    }, [
+        loadAdminUsers,
+        loadRestaurants,
+    ]);
+
+    /*
+     * ---------------------------------------------------------
+     * INITIAL LOAD
+     * ---------------------------------------------------------
+     */
+
     useEffect(() => {
         let cancelled = false;
 
@@ -166,84 +172,28 @@ function AdminUsers() {
                     data: {
                         session,
                     },
-                } =
-                    await supabase.auth.getSession();
+                } = await supabase.auth.getSession();
 
                 if (
                     session?.user?.id &&
                     !cancelled
                 ) {
                     setCurrentUserId(
-                        session.user.id,
+                        session.user.id
                     );
                 }
 
-                const [
-                    {
-                        data: userData,
-                        error: userError,
-                    },
-                    {
-                        data: restaurantData,
-                        error: restaurantError,
-                    },
-                ] = await Promise.all([
-                    supabase
-                        .from("admin_users")
-                        .select(
-                            "user_id, restaurant_id, role, is_active, created_at",
-                        )
-                        .order(
-                            "created_at",
-                            {
-                                ascending:
-                                    false,
-                            },
-                        ),
-
-                    supabase
-                        .from("restaurants")
-                        .select(
-                            "id, name",
-                        )
-                        .order("name"),
-                ]);
-
-                if (cancelled) {
-                    return;
+                if (!cancelled) {
+                    await loadData();
                 }
-
-                if (userError) {
-                    throw new Error(
-                        userError.message,
-                    );
-                }
-
-                if (
-                    restaurantError
-                ) {
-                    throw new Error(
-                        restaurantError.message,
-                    );
-                }
-
-                setUsers(
-                    userData ?? [],
-                );
-
-                setRestaurants(
-                    restaurantData ?? [],
-                );
             } catch (err) {
                 if (!cancelled) {
                     setError(
                         err instanceof Error
                             ? err.message
-                            : "Failed to load users.",
+                            : "Failed to load administrator accounts."
                     );
-                }
-            } finally {
-                if (!cancelled) {
+
                     setIsLoading(false);
                 }
             }
@@ -254,33 +204,43 @@ function AdminUsers() {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [loadData]);
 
     /*
-     * Get restaurant name.
+     * ---------------------------------------------------------
+     * CREATE USER
+     * ---------------------------------------------------------
      */
-    function getRestaurantName(
-        id: string,
-    ) {
-        return (
-            restaurants.find(
-                (restaurant) =>
-                    restaurant.id === id,
-            )?.name ??
-            "Unknown restaurant"
-        );
-    }
 
-    /*
-     * Create user.
-     */
     async function handleCreateUser(
-        event: React.FormEvent<HTMLFormElement>,
+        event: FormEvent<HTMLFormElement>
     ) {
         event.preventDefault();
 
-        setError(null);
-        setSuccess(null);
+        clearMessages();
+
+        const cleanEmail =
+            email.trim().toLowerCase();
+
+        if (!cleanEmail) {
+            setError("Email is required.");
+            return;
+        }
+
+        if (password.length < 8) {
+            setError(
+                "Password must be at least 8 characters."
+            );
+            return;
+        }
+
+        if (!restaurantId) {
+            setError(
+                "Please select a restaurant."
+            );
+            return;
+        }
+
         setIsCreating(true);
 
         try {
@@ -293,7 +253,7 @@ function AdminUsers() {
 
             if (!session) {
                 throw new Error(
-                    "Your session has expired.",
+                    "Your session has expired."
                 );
             }
 
@@ -305,24 +265,72 @@ function AdminUsers() {
                     "create-admin-user",
                     {
                         body: {
-                            email,
+                            email: cleanEmail,
                             password,
                             restaurant_id:
                                 restaurantId,
                             role,
                         },
-                    },
+                    }
                 );
 
             if (functionError) {
+                console.error(
+                    "CREATE ADMIN ERROR:",
+                    functionError
+                );
+
+                if (
+                    functionError instanceof
+                    FunctionsHttpError
+                ) {
+                    let details =
+                        "Unknown Edge Function error.";
+
+                    try {
+                        const body =
+                            await functionError.context.json();
+
+                        details =
+                            body?.error ??
+                            body?.message ??
+                            JSON.stringify(body);
+                    } catch {
+                        details =
+                            functionError.message;
+                    }
+
+                    throw new Error(
+                        `create-admin-user failed: ${details}`
+                    );
+                }
+
+                if (
+                    functionError instanceof
+                    FunctionsRelayError
+                ) {
+                    throw new Error(
+                        `Edge Function relay error: ${functionError.message}`
+                    );
+                }
+
+                if (
+                    functionError instanceof
+                    FunctionsFetchError
+                ) {
+                    throw new Error(
+                        `Could not reach Edge Function: ${functionError.message}`
+                    );
+                }
+
                 throw new Error(
-                    functionError.message,
+                    functionError.message
                 );
             }
 
             if (data?.error) {
                 throw new Error(
-                    data.error,
+                    data.error
                 );
             }
 
@@ -330,7 +338,7 @@ function AdminUsers() {
                 `${role === "admin"
                     ? "Admin"
                     : "Staff"
-                } account created successfully.`,
+                } account created successfully.`
             );
 
             setEmail("");
@@ -338,12 +346,12 @@ function AdminUsers() {
             setRestaurantId("");
             setRole("admin");
 
-            await loadData();
+            await loadAdminUsers();
         } catch (err) {
             setError(
                 err instanceof Error
                     ? err.message
-                    : "Failed to create user.",
+                    : "Failed to create user."
             );
         } finally {
             setIsCreating(false);
@@ -351,30 +359,34 @@ function AdminUsers() {
     }
 
     /*
-     * Open edit modal.
+     * ---------------------------------------------------------
+     * OPEN EDIT
+     * ---------------------------------------------------------
      */
+
     function openEditUser(
-        user: AdminUser,
+        user: AdminUser
     ) {
-        setError(null);
-        setSuccess(null);
+        clearMessages();
 
         setEditingUser(user);
-
         setEditRestaurantId(
-            user.restaurant_id,
+            user.restaurant_id
         );
 
         setEditRole(
             user.role === "staff"
                 ? "staff"
-                : "admin",
+                : "admin"
         );
     }
 
     /*
-     * Close edit modal.
+     * ---------------------------------------------------------
+     * CLOSE EDIT
+     * ---------------------------------------------------------
      */
+
     function closeEditUser() {
         if (processingUserId) {
             return;
@@ -386,24 +398,33 @@ function AdminUsers() {
     }
 
     /*
-     * Update user.
+     * ---------------------------------------------------------
+     * UPDATE USER
+     * ---------------------------------------------------------
      */
+
     async function handleUpdateUser() {
         if (!editingUser) {
             return;
         }
 
-        setError(null);
-        setSuccess(null);
+        clearMessages();
+
+        if (!editRestaurantId) {
+            setError(
+                "Please select a restaurant."
+            );
+            return;
+        }
+
         setProcessingUserId(
-            editingUser.user_id,
+            editingUser.user_id
         );
 
         try {
             const {
                 data,
-                error:
-                functionError,
+                error: functionError,
             } =
                 await supabase.functions.invoke(
                     "manage-admin-user",
@@ -416,70 +437,68 @@ function AdminUsers() {
                                 editRestaurantId,
                             role: editRole,
                         },
-                    },
+                    }
                 );
 
             if (functionError) {
                 throw new Error(
-                    functionError.message,
+                    functionError.message
                 );
             }
 
             if (data?.error) {
                 throw new Error(
-                    data.error,
+                    data.error
                 );
             }
 
             setSuccess(
-                "User updated successfully.",
+                "User updated successfully."
             );
 
-            setEditingUser(null);
+            closeEditUser();
 
-            await loadData();
+            await loadAdminUsers();
         } catch (err) {
             setError(
                 err instanceof Error
                     ? err.message
-                    : "Failed to update user.",
+                    : "Failed to update user."
             );
         } finally {
-            setProcessingUserId(
-                null,
-            );
+            setProcessingUserId(null);
         }
     }
 
     /*
-     * Activate / deactivate.
+     * ---------------------------------------------------------
+     * TOGGLE USER
+     * ---------------------------------------------------------
      */
+
     async function handleToggleUser(
-        user: AdminUser,
+        user: AdminUser
     ) {
         if (
             user.user_id ===
             currentUserId
         ) {
             setError(
-                "You cannot deactivate your own account.",
+                "You cannot deactivate your own account."
             );
-
             return;
         }
 
-        setError(null);
-        setSuccess(null);
+        clearMessages();
 
         setProcessingUserId(
-            user.user_id,
+            user.user_id
         );
 
         try {
             const {
                 data,
-                error:
-                functionError,
+                error: functionError,
             } =
                 await supabase.functions.invoke(
                     "manage-admin-user",
@@ -491,79 +510,77 @@ function AdminUsers() {
                             is_active:
                                 !user.is_active,
                         },
-                    },
+                    }
                 );
 
             if (functionError) {
                 throw new Error(
-                    functionError.message,
+                    functionError.message
                 );
             }
 
             if (data?.error) {
                 throw new Error(
-                    data.error,
+                    data.error
                 );
             }
 
             setSuccess(
                 user.is_active
                     ? "User deactivated successfully."
-                    : "User activated successfully.",
+                    : "User activated successfully."
             );
 
-            await loadData();
+            await loadAdminUsers();
         } catch (err) {
             setError(
                 err instanceof Error
                     ? err.message
-                    : "Failed to update user status.",
+                    : "Failed to update user status."
             );
         } finally {
-            setProcessingUserId(
-                null,
-            );
+            setProcessingUserId(null);
         }
     }
 
     /*
-     * Delete user.
+     * ---------------------------------------------------------
+     * DELETE USER
+     * ---------------------------------------------------------
      */
+
     async function handleDeleteUser(
-        user: AdminUser,
+        user: AdminUser
     ) {
         if (
             user.user_id ===
             currentUserId
         ) {
             setError(
-                "You cannot delete your own account.",
+                "You cannot delete your own account."
             );
-
             return;
         }
 
         const confirmed =
             window.confirm(
-                `Delete this ${user.role} account?\n\nThis will permanently remove the user's administrator access.`,
+                `Delete this ${user.role} account?\n\nThis will permanently remove the user's administrator access.`
             );
 
         if (!confirmed) {
             return;
         }
 
-        setError(null);
-        setSuccess(null);
+        clearMessages();
 
         setProcessingUserId(
-            user.user_id,
+            user.user_id
         );
 
         try {
             const {
                 data,
-                error:
-                functionError,
+                error: functionError,
             } =
                 await supabase.functions.invoke(
                     "manage-admin-user",
@@ -573,42 +590,46 @@ function AdminUsers() {
                             user_id:
                                 user.user_id,
                         },
-                    },
+                    }
                 );
 
             if (functionError) {
                 throw new Error(
-                    functionError.message,
+                    functionError.message
                 );
             }
 
             if (data?.error) {
                 throw new Error(
-                    data.error,
+                    data.error
                 );
             }
 
             setSuccess(
-                "User deleted successfully.",
+                "User deleted successfully."
             );
 
-            await loadData();
+            await loadAdminUsers();
         } catch (err) {
             setError(
                 err instanceof Error
                     ? err.message
-                    : "Failed to delete user.",
+                    : "Failed to delete user."
             );
         } finally {
-            setProcessingUserId(
-                null,
-            );
+            setProcessingUserId(null);
         }
     }
 
+    /*
+     * ---------------------------------------------------------
+     * RENDER
+     * ---------------------------------------------------------
+     */
+
     return (
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            {/* Header */}
+
             <div className="mb-8">
                 <p className="text-sm font-semibold text-yellow-400">
                     Super Admin
@@ -624,7 +645,6 @@ function AdminUsers() {
                 </p>
             </div>
 
-            {/* Error */}
             {error && (
                 <div className="mb-6 flex items-start justify-between gap-4 rounded-2xl border border-red-400/20 bg-red-400/5 p-4 text-sm text-red-300">
                     <span>{error}</span>
@@ -635,13 +655,13 @@ function AdminUsers() {
                             setError(null)
                         }
                         className="shrink-0 text-red-300 transition hover:text-white"
+                        aria-label="Close error"
                     >
                         <X className="h-4 w-4" />
                     </button>
                 </div>
             )}
 
-            {/* Success */}
             {success && (
                 <div className="mb-6 flex items-start justify-between gap-4 rounded-2xl border border-green-400/20 bg-green-400/5 p-4 text-sm text-green-300">
                     <span>{success}</span>
@@ -652,18 +672,23 @@ function AdminUsers() {
                             setSuccess(null)
                         }
                         className="shrink-0 text-green-300 transition hover:text-white"
+                        aria-label="Close success"
                     >
-                        <X className="h-4 w-4" />
+                        <Check className="h-4 w-4" />
                     </button>
                 </div>
             )}
 
-            <div className="grid min-w-0 gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
-                {/* Create User */}
-                <section className="min-w-0 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+            <div className="grid gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
+
+                {/* CREATE USER */}
+
+                <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+
                     <div className="mb-6 flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-400 text-gray-950">
-                            <UserPlus className="h-5 w-5" />
+
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-400">
+                            <UserPlus className="h-6 w-6 text-gray-950" />
                         </div>
 
                         <div>
@@ -671,19 +696,18 @@ function AdminUsers() {
                                 Create User
                             </h2>
 
-                            <p className="text-xs text-gray-500">
+                            <p className="text-sm text-gray-500">
                                 Admin or staff account
                             </p>
                         </div>
+
                     </div>
 
                     <form
-                        onSubmit={
-                            handleCreateUser
-                        }
+                        onSubmit={handleCreateUser}
                         className="space-y-4"
                     >
-                        {/* Email */}
+
                         <div>
                             <label className="mb-2 block text-xs font-semibold text-gray-400">
                                 Email
@@ -695,8 +719,7 @@ function AdminUsers() {
                                 value={email}
                                 onChange={(event) =>
                                     setEmail(
-                                        event.target
-                                            .value,
+                                        event.target.value
                                     )
                                 }
                                 placeholder="admin@example.com"
@@ -704,7 +727,6 @@ function AdminUsers() {
                             />
                         </div>
 
-                        {/* Password */}
                         <div>
                             <label className="mb-2 block text-xs font-semibold text-gray-400">
                                 Temporary Password
@@ -717,8 +739,7 @@ function AdminUsers() {
                                 value={password}
                                 onChange={(event) =>
                                     setPassword(
-                                        event.target
-                                            .value,
+                                        event.target.value
                                     )
                                 }
                                 placeholder="Minimum 8 characters"
@@ -726,7 +747,6 @@ function AdminUsers() {
                             />
                         </div>
 
-                        {/* Restaurant */}
                         <div>
                             <label className="mb-2 block text-xs font-semibold text-gray-400">
                                 Restaurant
@@ -737,8 +757,7 @@ function AdminUsers() {
                                 value={restaurantId}
                                 onChange={(event) =>
                                     setRestaurantId(
-                                        event.target
-                                            .value,
+                                        event.target.value
                                     )
                                 }
                                 className="w-full rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-white outline-none focus:border-yellow-400/50"
@@ -748,9 +767,7 @@ function AdminUsers() {
                                 </option>
 
                                 {restaurants.map(
-                                    (
-                                        restaurant,
-                                    ) => (
+                                    (restaurant) => (
                                         <option
                                             key={
                                                 restaurant.id
@@ -763,12 +780,11 @@ function AdminUsers() {
                                                 restaurant.name
                                             }
                                         </option>
-                                    ),
+                                    )
                                 )}
                             </select>
                         </div>
 
-                        {/* Role */}
                         <div>
                             <label className="mb-2 block text-xs font-semibold text-gray-400">
                                 Role
@@ -779,7 +795,7 @@ function AdminUsers() {
                                 onChange={(event) =>
                                     setRole(
                                         event.target
-                                            .value as EditableRole,
+                                            .value as EditableRole
                                     )
                                 }
                                 className="w-full rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-white outline-none focus:border-yellow-400/50"
@@ -794,13 +810,10 @@ function AdminUsers() {
                             </select>
                         </div>
 
-                        {/* Submit */}
                         <button
                             type="submit"
-                            disabled={
-                                isCreating
-                            }
-                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-yellow-400 px-4 py-3 text-sm font-bold text-gray-950 transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={isCreating}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-yellow-400 px-4 py-3 text-sm font-black text-gray-950 transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {isCreating ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -812,37 +825,36 @@ function AdminUsers() {
                                 ? "Creating..."
                                 : "Create User"}
                         </button>
+
                     </form>
                 </section>
 
-                {/* Users */}
+                {/* ADMIN USERS */}
+
                 <section className="min-w-0 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-6">
-                    <div className="mb-6 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
-                                <Users className="h-5 w-5 text-white" />
-                            </div>
 
-                            <div>
-                                <h2 className="font-black text-white">
-                                    Administrator Accounts
-                                </h2>
+                    <div className="mb-6 flex items-center gap-3">
 
-                                <p className="text-xs text-gray-500">
-                                    {
-                                        users.length
-                                    }{" "}
-                                    account
-                                    {users.length ===
-                                        1
-                                        ? ""
-                                        : "s"}
-                                </p>
-                            </div>
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
+                            <Users className="h-5 w-5 text-white" />
                         </div>
+
+                        <div>
+                            <h2 className="font-black text-white">
+                                Administrator Accounts
+                            </h2>
+
+                            <p className="text-xs text-gray-500">
+                                {users.length}{" "}
+                                account
+                                {users.length === 1
+                                    ? ""
+                                    : "s"}
+                            </p>
+                        </div>
+
                     </div>
 
-                    {/* Loading */}
                     {isLoading && (
                         <div className="flex min-h-52 items-center justify-center">
                             <div className="text-center">
@@ -855,38 +867,32 @@ function AdminUsers() {
                         </div>
                     )}
 
-                    {/* Empty */}
                     {!isLoading &&
-                        users.length ===
-                        0 && (
+                        users.length === 0 && (
                             <div className="flex min-h-52 items-center justify-center rounded-2xl border border-dashed border-white/10">
                                 <div className="text-center">
                                     <Users className="mx-auto h-8 w-8 text-gray-600" />
 
                                     <p className="mt-3 text-sm font-semibold text-gray-400">
-                                        No administrator
-                                        accounts
-                                        found.
+                                        No administrator accounts found.
                                     </p>
 
                                     <p className="mt-1 text-xs text-gray-600">
-                                        Create an
-                                        account
-                                        using the
-                                        form.
+                                        Create an account using the form.
                                     </p>
                                 </div>
                             </div>
                         )}
 
-                    {/* Users */}
                     {!isLoading &&
-                        users.length >
-                        0 && (
+                        users.length > 0 && (
                             <div className="w-full overflow-x-auto">
-                                <table className="w-full min-w-[760px] text-left">
+
+                                <table className="w-full min-w-[850px] text-left">
+
                                     <thead>
                                         <tr className="border-b border-white/10 text-xs uppercase tracking-wider text-gray-600">
+
                                             <th className="px-3 py-3">
                                                 User
                                             </th>
@@ -906,14 +912,14 @@ function AdminUsers() {
                                             <th className="px-3 py-3 text-right">
                                                 Actions
                                             </th>
+
                                         </tr>
                                     </thead>
 
-                                    <tbody>
+                                    <tbody className="divide-y divide-white/5">
+
                                         {users.map(
-                                            (
-                                                user,
-                                            ) => {
+                                            (user) => {
                                                 const isSelf =
                                                     user.user_id ===
                                                     currentUserId;
@@ -922,180 +928,193 @@ function AdminUsers() {
                                                     processingUserId ===
                                                     user.user_id;
 
-                                                const isSuperAdmin =
-                                                    user.role ===
-                                                    "super_admin";
-
                                                 return (
                                                     <tr
                                                         key={
-                                                            user.user_id
+                                                            user.id
                                                         }
-                                                        className="border-b border-white/5 transition hover:bg-white/[0.02]"
+                                                        className="transition hover:bg-white/[0.02]"
                                                     >
-                                                        {/* User */}
+
                                                         <td className="px-3 py-4">
-                                                            <div className="min-w-0">
-                                                                <p className="max-w-[180px] truncate text-xs font-medium text-gray-400">
-                                                                    {
-                                                                        user.user_id
-                                                                    }
+                                                            <div className="max-w-[280px]">
+
+                                                                <p className="truncate text-sm font-semibold text-white">
+                                                                    {user.email ??
+                                                                        user.user_id}
+                                                                </p>
+
+                                                                <p className="mt-1 truncate text-[10px] text-gray-600">
+                                                                    {user.user_id}
                                                                 </p>
 
                                                                 {isSelf && (
-                                                                    <span className="mt-1 inline-flex rounded-md bg-yellow-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-yellow-400">
+                                                                    <span className="mt-1 inline-flex rounded-md bg-yellow-400/10 px-2 py-1 text-[10px] font-bold uppercase text-yellow-400">
                                                                         You
                                                                     </span>
                                                                 )}
+
                                                             </div>
                                                         </td>
 
-                                                        {/* Restaurant */}
-                                                        <td className="px-3 py-4 text-sm font-semibold text-white">
-                                                            {
-                                                                getRestaurantName(
-                                                                    user.restaurant_id,
-                                                                )
-                                                            }
+                                                        <td className="px-3 py-4 text-sm text-gray-300">
+                                                            {user.restaurant_name ??
+                                                                "Unknown restaurant"}
                                                         </td>
 
-                                                        {/* Role */}
                                                         <td className="px-3 py-4">
+
                                                             <span
-                                                                className={
-                                                                    user.role ===
+                                                                className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-bold ${user.role ===
                                                                         "super_admin"
-                                                                        ? "inline-flex rounded-lg bg-yellow-400/10 px-2.5 py-1 text-xs font-bold uppercase text-yellow-400"
+                                                                        ? "bg-yellow-400/10 text-yellow-400"
                                                                         : user.role ===
                                                                             "admin"
-                                                                            ? "inline-flex rounded-lg bg-blue-400/10 px-2.5 py-1 text-xs font-bold uppercase text-blue-400"
-                                                                            : "inline-flex rounded-lg bg-white/10 px-2.5 py-1 text-xs font-bold uppercase text-gray-300"
-                                                                }
+                                                                            ? "bg-blue-400/10 text-blue-300"
+                                                                            : "bg-white/10 text-gray-300"
+                                                                    }`}
                                                             >
-                                                                {
-                                                                    user.role
-                                                                }
+                                                                {user.role
+                                                                    .replace(
+                                                                        "_",
+                                                                        " "
+                                                                    )
+                                                                    .toUpperCase()}
                                                             </span>
+
                                                         </td>
 
-                                                        {/* Status */}
                                                         <td className="px-3 py-4">
-                                                            <span
-                                                                className={
-                                                                    user.is_active
-                                                                        ? "inline-flex items-center gap-2 text-xs font-semibold text-green-400"
-                                                                        : "inline-flex items-center gap-2 text-xs font-semibold text-red-400"
-                                                                }
-                                                            >
-                                                                <span
-                                                                    className={
-                                                                        user.is_active
-                                                                            ? "h-2 w-2 rounded-full bg-green-400"
-                                                                            : "h-2 w-2 rounded-full bg-red-400"
-                                                                    }
-                                                                />
 
+                                                            <span
+                                                                className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-bold ${user.is_active
+                                                                        ? "bg-green-400/10 text-green-400"
+                                                                        : "bg-red-400/10 text-red-400"
+                                                                    }`}
+                                                            >
                                                                 {user.is_active
                                                                     ? "Active"
                                                                     : "Inactive"}
                                                             </span>
+
                                                         </td>
 
-                                                        {/* Actions */}
                                                         <td className="px-3 py-4">
-                                                            {isSuperAdmin ? (
-                                                                <span className="text-xs font-medium text-gray-600">
-                                                                    Protected
-                                                                </span>
-                                                            ) : (
-                                                                <div className="flex items-center justify-end gap-2">
-                                                                    {/* Edit */}
-                                                                    <button
-                                                                        type="button"
-                                                                        disabled={
-                                                                            isProcessing
-                                                                        }
-                                                                        onClick={() =>
-                                                                            openEditUser(
-                                                                                user,
-                                                                            )
-                                                                        }
-                                                                        title="Edit user"
-                                                                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 transition hover:border-yellow-400/30 hover:bg-yellow-400/10 hover:text-yellow-400 disabled:cursor-not-allowed disabled:opacity-40"
-                                                                    >
-                                                                        <Edit3 className="h-4 w-4" />
-                                                                    </button>
 
-                                                                    {/* Activate / Deactivate */}
-                                                                    <button
-                                                                        type="button"
-                                                                        disabled={
-                                                                            isProcessing ||
-                                                                            isSelf
-                                                                        }
-                                                                        onClick={() =>
-                                                                            void handleToggleUser(
-                                                                                user,
-                                                                            )
-                                                                        }
-                                                                        title={
-                                                                            user.is_active
+                                                            <div className="flex items-center justify-end gap-2">
+
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={
+                                                                        isProcessing ||
+                                                                        user.role ===
+                                                                        "super_admin"
+                                                                    }
+                                                                    onClick={() =>
+                                                                        openEditUser(
+                                                                            user
+                                                                        )
+                                                                    }
+                                                                    title={
+                                                                        user.role ===
+                                                                            "super_admin"
+                                                                            ? "Super admin cannot be edited"
+                                                                            : "Edit user"
+                                                                    }
+                                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-yellow-400/10 bg-yellow-400/5 text-yellow-400 transition hover:border-yellow-400/30 hover:bg-yellow-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                                                >
+                                                                    <Edit3 className="h-4 w-4" />
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={
+                                                                        isProcessing ||
+                                                                        isSelf ||
+                                                                        user.role ===
+                                                                        "super_admin"
+                                                                    }
+                                                                    onClick={() =>
+                                                                        void handleToggleUser(
+                                                                            user
+                                                                        )
+                                                                    }
+                                                                    title={
+                                                                        isSelf
+                                                                            ? "You cannot deactivate yourself"
+                                                                            : user.is_active
                                                                                 ? "Deactivate user"
                                                                                 : "Activate user"
-                                                                        }
-                                                                        className={
-                                                                            user.is_active
-                                                                                ? "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-400/10 bg-red-400/5 text-red-400 transition hover:border-red-400/30 hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-40"
-                                                                                : "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-green-400/10 bg-green-400/5 text-green-400 transition hover:border-green-400/30 hover:bg-green-400/10 disabled:cursor-not-allowed disabled:opacity-40"
-                                                                        }
-                                                                    >
-                                                                        {isProcessing ? (
-                                                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                                                        ) : user.is_active ? (
-                                                                            <X className="h-4 w-4" />
-                                                                        ) : (
-                                                                            <Check className="h-4 w-4" />
-                                                                        )}
-                                                                    </button>
+                                                                    }
+                                                                    className={
+                                                                        user.is_active
+                                                                            ? "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-400/10 bg-red-400/5 text-red-400 transition hover:border-red-400/30 hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                                                            : "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-green-400/10 bg-green-400/5 text-green-400 transition hover:border-green-400/30 hover:bg-green-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                                                    }
+                                                                >
+                                                                    {isProcessing ? (
+                                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                                    ) : user.is_active ? (
+                                                                        <X className="h-4 w-4" />
+                                                                    ) : (
+                                                                        <Check className="h-4 w-4" />
+                                                                    )}
+                                                                </button>
 
-                                                                    {/* Delete */}
-                                                                    <button
-                                                                        type="button"
-                                                                        disabled={
-                                                                            isProcessing ||
-                                                                            isSelf
-                                                                        }
-                                                                        onClick={() =>
-                                                                            void handleDeleteUser(
-                                                                                user,
-                                                                            )
-                                                                        }
-                                                                        title="Delete user"
-                                                                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-400/10 bg-red-400/5 text-red-400 transition hover:border-red-400/30 hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-40"
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </button>
-                                                                </div>
-                                                            )}
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={
+                                                                        isProcessing ||
+                                                                        isSelf ||
+                                                                        user.role ===
+                                                                        "super_admin"
+                                                                    }
+                                                                    onClick={() =>
+                                                                        void handleDeleteUser(
+                                                                            user
+                                                                        )
+                                                                    }
+                                                                    title={
+                                                                        isSelf
+                                                                            ? "You cannot delete yourself"
+                                                                            : "Delete user"
+                                                                    }
+                                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-400/10 bg-red-400/5 text-red-400 transition hover:border-red-400/30 hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+
+                                                            </div>
+
                                                         </td>
+
                                                     </tr>
                                                 );
-                                            },
+                                            }
                                         )}
+
                                     </tbody>
+
                                 </table>
+
                             </div>
                         )}
+
                 </section>
+
             </div>
 
-            {/* Edit Modal */}
+            {/* EDIT MODAL */}
+
             {editingUser && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+
                     <div className="w-full max-w-md rounded-3xl border border-white/10 bg-gray-950 p-6 shadow-2xl">
-                        {/* Modal Header */}
+
                         <div className="mb-6 flex items-start justify-between gap-4">
+
                             <div>
+
                                 <p className="text-xs font-semibold uppercase tracking-wider text-yellow-400">
                                     Super Admin
                                 </p>
@@ -1105,145 +1124,145 @@ function AdminUsers() {
                                 </h2>
 
                                 <p className="mt-1 max-w-sm truncate text-xs text-gray-500">
-                                    {
-                                        editingUser.user_id
-                                    }
+                                    {editingUser.email ??
+                                        editingUser.user_id}
                                 </p>
+
                             </div>
 
                             <button
                                 type="button"
-                                onClick={
-                                    closeEditUser
-                                }
+                                onClick={closeEditUser}
                                 disabled={
                                     Boolean(
-                                        processingUserId,
+                                        processingUserId
                                     )
                                 }
                                 className="rounded-lg p-2 text-gray-500 transition hover:bg-white/5 hover:text-white disabled:opacity-40"
                             >
                                 <X className="h-5 w-5" />
                             </button>
+
                         </div>
 
-                        <div className="space-y-5">
-                            {/* Restaurant */}
-                            <div>
-                                <label className="mb-2 block text-xs font-semibold text-gray-400">
-                                    Restaurant
-                                </label>
+                        <div className="mb-5">
 
-                                <select
-                                    value={
-                                        editRestaurantId
-                                    }
-                                    onChange={(
-                                        event,
-                                    ) =>
-                                        setEditRestaurantId(
-                                            event
-                                                .target
-                                                .value,
-                                        )
-                                    }
-                                    className="w-full rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-white outline-none focus:border-yellow-400/50"
-                                >
-                                    {restaurants.map(
-                                        (
-                                            restaurant,
-                                        ) => (
-                                            <option
-                                                key={
-                                                    restaurant.id
-                                                }
-                                                value={
-                                                    restaurant.id
-                                                }
-                                            >
-                                                {
-                                                    restaurant.name
-                                                }
-                                            </option>
-                                        ),
-                                    )}
-                                </select>
-                            </div>
+                            <label className="mb-2 block text-xs font-semibold text-gray-400">
+                                Restaurant
+                            </label>
 
-                            {/* Role */}
-                            <div>
-                                <label className="mb-2 block text-xs font-semibold text-gray-400">
-                                    Role
-                                </label>
+                            <select
+                                value={
+                                    editRestaurantId
+                                }
+                                onChange={(event) =>
+                                    setEditRestaurantId(
+                                        event.target.value
+                                    )
+                                }
+                                className="w-full rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-white outline-none focus:border-yellow-400/50"
+                            >
 
-                                <select
-                                    value={
-                                        editRole
-                                    }
-                                    onChange={(
-                                        event,
-                                    ) =>
-                                        setEditRole(
-                                            event
-                                                .target
-                                                .value as EditableRole,
-                                        )
-                                    }
-                                    className="w-full rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-white outline-none focus:border-yellow-400/50"
-                                >
-                                    <option value="admin">
-                                        Admin
-                                    </option>
+                                <option value="">
+                                    Select restaurant
+                                </option>
 
-                                    <option value="staff">
-                                        Staff
-                                    </option>
-                                </select>
-                            </div>
+                                {restaurants.map(
+                                    (restaurant) => (
+                                        <option
+                                            key={
+                                                restaurant.id
+                                            }
+                                            value={
+                                                restaurant.id
+                                            }
+                                        >
+                                            {
+                                                restaurant.name
+                                            }
+                                        </option>
+                                    )
+                                )}
 
-                            {/* Actions */}
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={
-                                        closeEditUser
-                                    }
-                                    disabled={
-                                        Boolean(
-                                            processingUserId,
-                                        )
-                                    }
-                                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-gray-300 transition hover:bg-white/10 hover:text-white disabled:opacity-40"
-                                >
-                                    Cancel
-                                </button>
+                            </select>
 
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        void handleUpdateUser()
-                                    }
-                                    disabled={
-                                        Boolean(
-                                            processingUserId,
-                                        ) ||
-                                        !editRestaurantId
-                                    }
-                                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-yellow-400 px-4 py-3 text-sm font-bold text-gray-950 transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    {processingUserId ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Check className="h-4 w-4" />
-                                    )}
-
-                                    Save Changes
-                                </button>
-                            </div>
                         </div>
+
+                        <div className="mb-6">
+
+                            <label className="mb-2 block text-xs font-semibold text-gray-400">
+                                Role
+                            </label>
+
+                            <select
+                                value={editRole}
+                                onChange={(event) =>
+                                    setEditRole(
+                                        event.target
+                                            .value as EditableRole
+                                    )
+                                }
+                                className="w-full rounded-xl border border-white/10 bg-gray-900 px-4 py-3 text-sm text-white outline-none focus:border-yellow-400/50"
+                            >
+
+                                <option value="admin">
+                                    Admin
+                                </option>
+
+                                <option value="staff">
+                                    Staff
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                        <div className="flex gap-3">
+
+                            <button
+                                type="button"
+                                onClick={closeEditUser}
+                                disabled={
+                                    Boolean(
+                                        processingUserId
+                                    )
+                                }
+                                className="flex-1 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-gray-300 transition hover:bg-white/5 hover:text-white disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    void handleUpdateUser()
+                                }
+                                disabled={
+                                    Boolean(
+                                        processingUserId
+                                    ) ||
+                                    !editRestaurantId
+                                }
+                                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-yellow-400 px-4 py-3 text-sm font-black text-gray-950 transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+
+                                {processingUserId ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Check className="h-4 w-4" />
+                                )}
+
+                                Save Changes
+
+                            </button>
+
+                        </div>
+
                     </div>
+
                 </div>
             )}
+
         </div>
     );
 }

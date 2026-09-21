@@ -12,11 +12,26 @@ export type RestaurantStatus =
         message: string;
     };
 
-function formatTime(time: string): string {
-    const [hours, minutes] = time.split(":").map(Number);
+/**
+ * Convert a database TIME value such as:
+ * "09:00:00"
+ * "22:00:00"
+ *
+ * into a user-friendly local time.
+ */
+export function formatTime(time: string): string {
+    const [hours, minutes] = time
+        .split(":")
+        .map(Number);
 
     const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
+
+    date.setHours(
+        hours,
+        minutes,
+        0,
+        0
+    );
 
     return date.toLocaleTimeString([], {
         hour: "numeric",
@@ -24,12 +39,31 @@ function formatTime(time: string): string {
     });
 }
 
+/**
+ * Convert HH:MM or HH:MM:SS into minutes from midnight.
+ */
 function timeToMinutes(time: string): number {
-    const [hours, minutes] = time.split(":").map(Number);
+    const [hours, minutes] = time
+        .split(":")
+        .map(Number);
 
-    return hours * 60 + minutes;
+    return (
+        hours * 60 +
+        minutes
+    );
 }
 
+/**
+ * Calculate the current restaurant status.
+ *
+ * Priority:
+ *
+ * 1. Manual admin closure
+ * 2. Opening hours
+ * 3. Current browser local time
+ *
+ * The browser's local timezone is used intentionally.
+ */
 export function getRestaurantStatus(
     restaurant: Restaurant
 ): RestaurantStatus {
@@ -40,35 +74,48 @@ export function getRestaurantStatus(
         return {
             isOpen: false,
             label: "CLOSED TODAY",
-            message: `Opens at ${formatTime(restaurant.opening_time)}`,
+            message: `Opens at ${formatTime(
+                restaurant.opening_time
+            )}`,
         };
     }
 
     const now = new Date();
 
-    const currentMinutes =
-        now.getHours() * 60 + now.getMinutes();
-
-    const openingMinutes = timeToMinutes(
-        restaurant.opening_time
-    );
-
-    const closingMinutes = timeToMinutes(
-        restaurant.closing_time
-    );
-
     /*
-     * Normal schedule:
-     * opening < closing
+     * Browser local time.
      *
      * Example:
-     * 11:00 → 22:00
+     * India → Asia/Calcutta / Asia/Kolkata
+     */
+    const currentMinutes =
+        now.getHours() * 60 +
+        now.getMinutes();
+
+    const openingMinutes =
+        timeToMinutes(
+            restaurant.opening_time
+        );
+
+    const closingMinutes =
+        timeToMinutes(
+            restaurant.closing_time
+        );
+
+    /*
+     * Normal schedule.
+     *
+     * Example:
+     * 09:00 → 22:00
      */
     if (openingMinutes < closingMinutes) {
-        if (
-            currentMinutes >= openingMinutes &&
-            currentMinutes < closingMinutes
-        ) {
+        const isOpen =
+            currentMinutes >=
+            openingMinutes &&
+            currentMinutes <
+            closingMinutes;
+
+        if (isOpen) {
             return {
                 isOpen: true,
                 label: "OPEN NOW",
@@ -88,31 +135,56 @@ export function getRestaurantStatus(
     }
 
     /*
-     * Overnight schedule:
-     * opening >= closing
+     * Overnight schedule.
      *
      * Example:
      * 18:00 → 02:00
+     *
+     * Open when:
+     *
+     * current >= 18:00
+     *
+     * OR
+     *
+     * current < 02:00
      */
-    const isOpen =
-        currentMinutes >= openingMinutes ||
-        currentMinutes < closingMinutes;
+    if (openingMinutes > closingMinutes) {
+        const isOpen =
+            currentMinutes >=
+            openingMinutes ||
+            currentMinutes <
+            closingMinutes;
 
-    if (isOpen) {
+        if (isOpen) {
+            return {
+                isOpen: true,
+                label: "OPEN NOW",
+                message: `Open until ${formatTime(
+                    restaurant.closing_time
+                )}`,
+            };
+        }
+
         return {
-            isOpen: true,
-            label: "OPEN NOW",
-            message: `Open until ${formatTime(
-                restaurant.closing_time
+            isOpen: false,
+            label: "CLOSED",
+            message: `Opens at ${formatTime(
+                restaurant.opening_time
             )}`,
         };
     }
 
+    /*
+     * opening === closing
+     *
+     * Example:
+     * 00:00 → 00:00
+     *
+     * Treat this as open 24 hours.
+     */
     return {
-        isOpen: false,
-        label: "CLOSED",
-        message: `Opens at ${formatTime(
-            restaurant.opening_time
-        )}`,
+        isOpen: true,
+        label: "OPEN NOW",
+        message: "Open 24 hours",
     };
 }
