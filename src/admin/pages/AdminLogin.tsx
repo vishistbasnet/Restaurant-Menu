@@ -84,7 +84,11 @@ function AdminLogin() {
             <div className="w-full max-w-md">
                 <div className="mb-8 text-center">
                     <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-yellow-400 text-xl font-black text-gray-950">
-                        M&D
+                        <a href="App.tsx"><img
+                            src="/favicon.svg"
+                            alt="Meal Deal"
+                            className="h-9 w-9 shrink-0"
+                        /></a>
                     </div>
 
                     <h1 className="text-3xl font-black">
@@ -165,7 +169,7 @@ function AdminLogin() {
                     Meal & Deal • Admin Portal
                 </p>
             </div>
-        </div>
+        </div >
     );
 }
 

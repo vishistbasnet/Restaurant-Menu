@@ -13,7 +13,7 @@ function Footer() {
                     {/* Brand */}
                     <div>
                         <h2 className="text-xl font-black text-white">
-                            Meal <span className="text-yellow-400">&</span> Deal
+                            Meal <span className="text-yellow-400">Deal</span>
                         </h2>
 
                         <p className="mt-2 text-sm font-medium text-gray-400">
@@ -86,7 +86,7 @@ function Footer() {
                 {/* Bottom */}
                 <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
                     <p className="text-xs text-gray-600">
-                        © {new Date().getFullYear()} Meal & Deal. All rights reserved.
+                        © {new Date().getFullYear()} Meal Deal. All rights reserved.
                     </p>
 
                     <p className="text-xs text-gray-600">

@@ -273,15 +273,21 @@ function AdminSidebar({
 
             <aside
                 className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col border-r border-white/10 bg-gray-950 transition-transform duration-300 lg:sticky lg:top-0 lg:z-40 lg:translate-x-0 ${isOpen
-                        ? "translate-x-0"
-                        : "-translate-x-full"
+                    ? "translate-x-0"
+                    : "-translate-x-full"
                     }`}
             >
                 {/* Brand */}
                 <div className="flex h-20 shrink-0 items-center border-b border-white/10 px-6">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-400 text-sm font-black text-gray-950">
-                            M&D
+                            <a href="App.tsx">
+                                <img
+                                    src="/favicon.svg"
+                                    alt="Meal Deal"
+                                    className="h-9 w-9 shrink-0"
+                                />
+                            </a>
                         </div>
 
                         <div className="min-w-0">
@@ -363,8 +369,8 @@ function AdminSidebar({
                         <div className="mt-auto shrink-0 border-t border-white/10 bg-gray-950 p-4">
                             <div
                                 className={`rounded-2xl border p-4 ${isRestaurantActive
-                                        ? "border-green-400/10 bg-green-400/[0.04]"
-                                        : "border-red-400/10 bg-red-400/[0.04]"
+                                    ? "border-green-400/10 bg-green-400/[0.04]"
+                                    : "border-red-400/10 bg-red-400/[0.04]"
                                     }`}
                             >
                                 <div className="flex items-center justify-between gap-3">
@@ -376,8 +382,8 @@ function AdminSidebar({
                                     {!isLoadingStatus && (
                                         <span
                                             className={`h-2 w-2 rounded-full ${isRestaurantActive
-                                                    ? "bg-green-400"
-                                                    : "bg-red-400"
+                                                ? "bg-green-400"
+                                                : "bg-red-400"
                                                 }`}
                                         />
                                     )}
@@ -392,8 +398,8 @@ function AdminSidebar({
                                     <div className="mt-3">
                                         <p
                                             className={`text-sm font-bold ${isRestaurantActive
-                                                    ? "text-green-400"
-                                                    : "text-red-400"
+                                                ? "text-green-400"
+                                                : "text-red-400"
                                                 }`}
                                         >
                                             {isRestaurantActive
@@ -419,7 +425,7 @@ function AdminSidebar({
                             </div>
                         </div>
                     )}
-            </aside>
+            </aside >
         </>
     );
 }

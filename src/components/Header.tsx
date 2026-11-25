@@ -14,8 +14,13 @@ function Header({ restaurant, status }: HeaderProps) {
         <header className="sticky top-0 z-50 border-b border-white/10 bg-gray-950/90 backdrop-blur-xl">
             <div className="mx-auto flex h-[60px] max-w-6xl items-center justify-between px-4">
                 <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-yellow-400 text-lg font-black text-gray-950">
-                        M
+                    <div className="flex min-w-0 items-center gap-3">
+                        <img
+                            src="/favicon.svg"
+                            alt="Meal Deal"
+                            className="h-9 w-9 shrink-0"
+                        />
+
                     </div>
 
                     <div className="min-w-0">
