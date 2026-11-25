@@ -1,112 +1,299 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
-const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers":
+        "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
-const supabaseAdmin = createClient(
-    supabaseUrl,
-    serviceRoleKey,
-    {
-        auth: {
-            autoRefreshToken: false,
-            persistSession: false,
+function jsonResponse(
+    body: unknown,
+    status: number,
+) {
+    return new Response(
+        JSON.stringify(body),
+        {
+            status,
+            headers: {
+                ...corsHeaders,
+                "Content-Type": "application/json",
+            },
         },
-    }
-);
+    );
+}
 
 interface CreateAdminUserRequest {
     email: string;
     password: string;
     restaurant_id: string;
-    role: "SUPER" | "ADMIN" | "STAFF";
+    role: "admin" | "staff";
 }
 
 Deno.serve(async (req) => {
+    if (req.method === "OPTIONS") {
+        return new Response("ok", {
+            headers: corsHeaders,
+        });
+    }
+
+    if (req.method !== "POST") {
+        return jsonResponse(
+            {
+                error: "Method not allowed",
+            },
+            405,
+        );
+    }
+
     try {
-        if (req.method !== "POST") {
-            return new Response(
-                JSON.stringify({
-                    error: "Method not allowed",
-                }),
-                {
-                    status: 405,
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
+        const supabaseUrl =
+            Deno.env.get("SUPABASE_URL");
+
+        const anonKey =
+            Deno.env.get("SUPABASE_ANON_KEY");
+
+        const serviceRoleKey =
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+        if (
+            !supabaseUrl ||
+            !anonKey ||
+            !serviceRoleKey
+        ) {
+            console.error(
+                "Missing Supabase environment variables",
             );
-        }
 
-        const body =
-            (await req.json()) as CreateAdminUserRequest;
-
-        const email = body.email?.trim().toLowerCase();
-        const password = body.password;
-        const restaurantId = body.restaurant_id;
-        const role = body.role;
-
-        if (!email) {
-            return new Response(
-                JSON.stringify({
-                    error: "Email is required.",
-                }),
+            return jsonResponse(
                 {
-                    status: 400,
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
-        }
-
-        if (!password) {
-            return new Response(
-                JSON.stringify({
-                    error: "Password is required.",
-                }),
-                {
-                    status: 400,
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
-        }
-
-        if (!restaurantId) {
-            return new Response(
-                JSON.stringify({
-                    error: "Restaurant is required.",
-                }),
-                {
-                    status: 400,
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
-        }
-
-        if (!["SUPER", "ADMIN", "STAFF"].includes(role)) {
-            return new Response(
-                JSON.stringify({
-                    error: "Invalid role.",
-                }),
-                {
-                    status: 400,
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
+                    error: "Server configuration error",
+                },
+                500,
             );
         }
 
         /*
          * --------------------------------------------------
-         * 1. Find existing Auth user
+         * 1. Authenticate the requester
+         * --------------------------------------------------
+         *
+         * This function uses the service-role key for the
+         * actual user-management operation, so we MUST verify
+         * the caller before creating/updating any admin user.
+         */
+        const authHeader =
+            req.headers.get("Authorization");
+
+        if (
+            !authHeader?.startsWith("Bearer ")
+        ) {
+            return jsonResponse(
+                {
+                    error: "Missing or invalid authorization",
+                },
+                401,
+            );
+        }
+
+        const userClient = createClient(
+            supabaseUrl,
+            anonKey,
+            {
+                global: {
+                    headers: {
+                        Authorization: authHeader,
+                    },
+                },
+            },
+        );
+
+        const {
+            data: { user: requester },
+            error: requesterError,
+        } = await userClient.auth.getUser();
+
+        if (
+            requesterError ||
+            !requester
+        ) {
+            return jsonResponse(
+                {
+                    error: "Unauthorized",
+                },
+                401,
+            );
+        }
+
+        /*
+         * --------------------------------------------------
+         * 2. Verify requester is an active Super Admin
          * --------------------------------------------------
          */
+        const {
+            data: isSuperAdmin,
+            error: roleError,
+        } = await userClient.rpc("is_super_admin");
 
+        if (roleError) {
+            console.error(
+                "Super admin verification failed:",
+                roleError,
+            );
+
+            return jsonResponse(
+                {
+                    error:
+                        "Unable to verify administrator permissions",
+                },
+                500,
+            );
+        }
+
+        if (!isSuperAdmin) {
+            return jsonResponse(
+                {
+                    error:
+                        "Only super admins can create users",
+                },
+                403,
+            );
+        }
+
+        /*
+         * --------------------------------------------------
+         * 3. Parse and validate request
+         * --------------------------------------------------
+         */
+        const body =
+            (await req.json()) as Partial<CreateAdminUserRequest>;
+
+        const email =
+            typeof body.email === "string"
+                ? body.email.trim().toLowerCase()
+                : "";
+
+        const password =
+            typeof body.password === "string"
+                ? body.password
+                : "";
+
+        const restaurantId =
+            typeof body.restaurant_id === "string"
+                ? body.restaurant_id.trim()
+                : "";
+
+        const role = body.role;
+
+        if (!email) {
+            return jsonResponse(
+                {
+                    error: "Email is required.",
+                },
+                400,
+            );
+        }
+
+        if (!password) {
+            return jsonResponse(
+                {
+                    error: "Password is required.",
+                },
+                400,
+            );
+        }
+
+        if (password.length < 8) {
+            return jsonResponse(
+                {
+                    error: "Password must be at least 8 characters.",
+                },
+                400,
+            );
+        }
+
+        if (!restaurantId) {
+            return jsonResponse(
+                {
+                    error: "Restaurant is required.",
+                },
+                400,
+            );
+        }
+
+        if (
+            role !== "admin" &&
+            role !== "staff"
+        ) {
+            return jsonResponse(
+                {
+                    error: "Role must be admin or staff.",
+                },
+                400,
+            );
+        }
+
+        /*
+         * --------------------------------------------------
+         * 4. Service-role client
+         * --------------------------------------------------
+         *
+         * Keep the service-role key on the server and only
+         * use it after the requester has been authorized.
+         */
+        const supabaseAdmin = createClient(
+            supabaseUrl,
+            serviceRoleKey,
+            {
+                auth: {
+                    autoRefreshToken: false,
+                    persistSession: false,
+                },
+            },
+        );
+
+        /*
+         * --------------------------------------------------
+         * 5. Verify restaurant exists
+         * --------------------------------------------------
+         */
+        const {
+            data: restaurant,
+            error: restaurantError,
+        } = await supabaseAdmin
+            .from("restaurants")
+            .select("id")
+            .eq("id", restaurantId)
+            .maybeSingle();
+
+        if (restaurantError) {
+            console.error(
+                "Restaurant lookup failed:",
+                restaurantError,
+            );
+
+            return jsonResponse(
+                {
+                    error: "Unable to verify restaurant.",
+                },
+                500,
+            );
+        }
+
+        if (!restaurant) {
+            return jsonResponse(
+                {
+                    error: "Restaurant not found.",
+                },
+                404,
+            );
+        }
+
+        /*
+         * --------------------------------------------------
+         * 6. Find existing Auth user
+         * --------------------------------------------------
+         */
         let existingUser = null;
 
         let page = 1;
@@ -123,18 +310,16 @@ Deno.serve(async (req) => {
 
             if (error) {
                 throw new Error(
-                    `Failed to search existing users: ${error.message}`
+                    `Failed to search existing users: ${error.message}`,
                 );
             }
 
             existingUser = data.users.find(
                 (user) =>
-                    user.email?.toLowerCase() === email
+                    user.email?.toLowerCase() === email,
             );
 
-            if (
-                data.users.length < perPage
-            ) {
+            if (data.users.length < perPage) {
                 break;
             }
 
@@ -143,10 +328,9 @@ Deno.serve(async (req) => {
 
         /*
          * --------------------------------------------------
-         * 2. Create user if it doesn't exist
+         * 7. Create Auth user if needed
          * --------------------------------------------------
          */
-
         let userId: string;
 
         if (existingUser) {
@@ -155,22 +339,21 @@ Deno.serve(async (req) => {
             const {
                 data,
                 error,
-            } =
-                await supabaseAdmin.auth.admin.createUser({
-                    email,
-                    password,
-                    email_confirm: true,
-                });
+            } = await supabaseAdmin.auth.admin.createUser({
+                email,
+                password,
+                email_confirm: true,
+            });
 
             if (error) {
                 throw new Error(
-                    `Failed to create Auth user: ${error.message}`
+                    `Failed to create Auth user: ${error.message}`,
                 );
             }
 
             if (!data.user) {
                 throw new Error(
-                    "Auth user was not created."
+                    "Auth user was not created.",
                 );
             }
 
@@ -179,10 +362,9 @@ Deno.serve(async (req) => {
 
         /*
          * --------------------------------------------------
-         * 3. Create/update admin_users record
+         * 8. Create/update admin_users record
          * --------------------------------------------------
          */
-
         const {
             data: adminUser,
             error: adminUserError,
@@ -196,25 +378,19 @@ Deno.serve(async (req) => {
                 },
                 {
                     onConflict: "user_id",
-                }
+                },
             )
             .select()
             .single();
 
         if (adminUserError) {
             throw new Error(
-                `Failed to save administrator record: ${adminUserError.message}`
+                `Failed to save administrator record: ${adminUserError.message}`,
             );
         }
 
-        /*
-         * --------------------------------------------------
-         * 4. Success
-         * --------------------------------------------------
-         */
-
-        return new Response(
-            JSON.stringify({
+        return jsonResponse(
+            {
                 success: true,
                 existingUser: Boolean(existingUser),
                 user: {
@@ -222,33 +398,23 @@ Deno.serve(async (req) => {
                     email,
                 },
                 adminUser,
-            }),
-            {
-                status: 200,
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            }
+            },
+            200,
         );
     } catch (error) {
         console.error(
             "create-admin-user error:",
-            error
+            error,
         );
 
-        return new Response(
-            JSON.stringify({
+        return jsonResponse(
+            {
                 error:
                     error instanceof Error
                         ? error.message
                         : "Unexpected server error.",
-            }),
-            {
-                status: 500,
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            }
+            },
+            500,
         );
     }
 });

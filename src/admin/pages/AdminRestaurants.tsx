@@ -1,4 +1,8 @@
-import { useEffect, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useState,
+} from "react";
 import {
     Building2,
     Check,
@@ -64,53 +68,64 @@ function AdminRestaurants() {
     const [form, setForm] =
         useState<RestaurantForm>(emptyForm);
 
-    async function loadRestaurants() {
-        try {
-            setIsLoading(true);
-            setError(null);
+    const loadRestaurants = useCallback(
+        async () => {
+            try {
+                setIsLoading(true);
+                setError(null);
 
-            const {
-                data: { user },
-                error: userError,
-            } = await supabase.auth.getUser();
+                const {
+                    data: { user },
+                    error: userError,
+                } = await supabase.auth.getUser();
 
-            if (userError || !user) {
-                throw new Error(
-                    "You must be logged in."
+                if (userError || !user) {
+                    throw new Error(
+                        "You must be logged in."
+                    );
+                }
+
+                const {
+                    data,
+                    error: restaurantError,
+                } = await supabase
+                    .from("restaurants")
+                    .select("*")
+                    .order("created_at", {
+                        ascending: false,
+                    });
+
+                if (restaurantError) {
+                    throw new Error(
+                        restaurantError.message
+                    );
+                }
+
+                setRestaurants(data ?? []);
+            } catch (err) {
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : "Failed to load restaurants."
                 );
+            } finally {
+                setIsLoading(false);
             }
+        },
+        []
+    );
 
-            const {
-                data,
-                error: restaurantError,
-            } = await supabase
-                .from("restaurants")
-                .select("*")
-                .order("created_at", {
-                    ascending: false,
-                });
-
-            if (restaurantError) {
-                throw new Error(
-                    restaurantError.message
-                );
-            }
-
-            setRestaurants(data ?? []);
-        } catch (err) {
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : "Failed to load restaurants."
-            );
-        } finally {
-            setIsLoading(false);
-        }
-    }
+    /*
+     * Initial restaurant load.
+     *
+     * This effect intentionally triggers the async
+     * data-loading function, which updates React state
+     * as part of the request lifecycle.*/
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         void loadRestaurants();
-    }, []);
+    }, [loadRestaurants]);
 
     function openCreateModal() {
         setEditingRestaurant(null);
