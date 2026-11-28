@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 
 import { supabase } from "../../lib/supabase";
-import AdminPageLoader from "./AdminPageLoader";
+import PageLoader from "../../components/PageLoader";
 
 /*
  * Supported administrator roles.
  */
-type AdminRole =
+export type AdminRole =
   | "super_admin"
   | "admin"
   | "staff";
@@ -137,7 +137,7 @@ function RoleProtectedRoute({
    * While checking the user's role.
    */
   if (isChecking) {
-    return <AdminPageLoader />;
+    return <PageLoader />;
   }
 
   /*

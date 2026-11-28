@@ -102,7 +102,16 @@ const navigation: NavigationItem[] = [
     },
 ];
 
-function formatTime(time: string): string {
+function formatTime(
+    time: string | null | undefined
+): string {
+    /*
+     * A missing time must not crash the whole admin area.
+     */
+    if (!time) {
+        return "--:--";
+    }
+
     const [hours, minutes] =
         time.split(":").map(Number);
 

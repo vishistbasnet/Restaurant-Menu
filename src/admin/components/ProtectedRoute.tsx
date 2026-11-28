@@ -21,7 +21,7 @@ function ProtectedRoute() {
 
                 const { data: adminUser, error } = await supabase
                     .from("admin_users")
-                    .select("user_id, restaurant_id")
+                    .select("user_id, restaurant_id, is_active")
                     .eq("user_id", session.user.id)
                     .maybeSingle();
 
@@ -31,7 +31,7 @@ function ProtectedRoute() {
                     return;
                 }
 
-                setIsAuthorized(Boolean(adminUser));
+                setIsAuthorized(Boolean(adminUser?.is_active));
             } finally {
                 setIsChecking(false);
             }
