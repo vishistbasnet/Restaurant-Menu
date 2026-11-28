@@ -1,6 +1,7 @@
 import type { Restaurant } from "../../types/restaurant";
 import type { RestaurantStatus } from "../../utils/restaurantHours";
-import heroBackground from "../../assets/meal-deal-food-hero.webp";
+import heroDesktop from "../../assets/hero-desktop.webp";
+import heroMobile from "../../assets/hero-mobile.webp";
 
 interface HeroProps {
     restaurant: Restaurant | null;
@@ -19,15 +20,23 @@ function Hero({ restaurant, status }: HeroProps) {
 
     return (
         <section className="relative min-h-[620px] overflow-hidden border-b border-white/10 bg-gray-950">
-            {/* Food background */}
-            <div
-                aria-hidden="true"
-                className="absolute inset-0 bg-cover bg-no-repeat"
-                style={{
-                    backgroundImage: `url(${heroBackground})`,
-                    backgroundPosition: "center right",
-                }}
-            />
+            {/* Food background (smaller cropped image on phones) */}
+            <picture>
+                <source
+                    media="(max-width: 767px)"
+                    srcSet={heroMobile}
+                />
+                <img
+                    src={heroDesktop}
+                    alt=""
+                    aria-hidden="true"
+                    width={1600}
+                    height={686}
+                    fetchPriority="high"
+                    decoding="async"
+                    className="absolute inset-0 h-full w-full object-cover object-right"
+                />
+            </picture>
 
             {/* Left-side readability overlay */}
             <div

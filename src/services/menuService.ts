@@ -1,4 +1,4 @@
-import { supabase } from "../lib/supabase";
+import { restGet } from "../lib/publicApi";
 
 import type { Restaurant } from "../types/restaurant";
 
@@ -24,6 +24,14 @@ export interface SupabaseMenuItem {
     menu_item_options: SupabaseMenuItemOption[];
 }
 
+export interface SupabaseCategory {
+    id: string;
+    restaurant_id: string;
+    name: string;
+    sort_order: number;
+    is_active: boolean;
+}
+
 /*
  * ---------------------------------------------------------
  * RESTAURANT
@@ -31,26 +39,13 @@ export interface SupabaseMenuItem {
  */
 
 export async function getRestaurant(): Promise<Restaurant> {
-    const { data, error } = await supabase
-        .from("restaurants")
-        .select(`
-            id,
-            name,
-            is_active,
-            opening_time,
-            closing_time,
-            phone,
-            whatsapp,
-            order_type
-        `)
-        .limit(1)
-        .maybeSingle();
+    const rows = await restGet<Restaurant[]>("restaurants", {
+        select:
+            "id,name,is_active,opening_time,closing_time,phone,whatsapp,order_type",
+        limit: "1",
+    });
 
-    if (error) {
-        throw new Error(
-            `Failed to fetch restaurant: ${error.message}`
-        );
-    }
+    const data = rows[0];
 
     if (!data) {
         throw new Error("No restaurant found.");
@@ -76,29 +71,13 @@ export async function getRestaurant(): Promise<Restaurant> {
 
 export async function getCategories(
     restaurantId: string
-) {
-    const { data, error } = await supabase
-        .from("categories")
-        .select(`
-            id,
-            restaurant_id,
-            name,
-            sort_order,
-            is_active
-        `)
-        .eq("restaurant_id", restaurantId)
-        .eq("is_active", true)
-        .order("sort_order", {
-            ascending: true,
-        });
-
-    if (error) {
-        throw new Error(
-            `Failed to fetch categories: ${error.message}`
-        );
-    }
-
-    return data ?? [];
+): Promise<SupabaseCategory[]> {
+    return restGet<SupabaseCategory[]>("categories", {
+        select: "id,restaurant_id,name,sort_order,is_active",
+        restaurant_id: `eq.${restaurantId}`,
+        is_active: "eq.true",
+        order: "sort_order.asc",
+    });
 }
 
 /*
@@ -110,38 +89,12 @@ export async function getCategories(
 export async function getMenuItems(
     restaurantId: string
 ): Promise<SupabaseMenuItem[]> {
-    const { data, error } = await supabase
-        .from("menu_items")
-        .select(`
-            id,
-            restaurant_id,
-            category_id,
-            name,
-            description,
-            is_veg,
-            price,
-            is_available,
-            sort_order,
-            menu_item_options (
-                id,
-                menu_item_id,
-                label,
-                price,
-                sort_order,
-                is_available
-            )
-        `)
-        .eq("restaurant_id", restaurantId)
-        .eq("is_available", true)
-        .order("sort_order", {
-            ascending: true,
-        });
-
-    if (error) {
-        throw new Error(
-            `Failed to fetch menu items: ${error.message}`
-        );
-    }
-
-    return (data ?? []) as SupabaseMenuItem[];
+    return restGet<SupabaseMenuItem[]>("menu_items", {
+        select:
+            "id,restaurant_id,category_id,name,description,is_veg,price,is_available,sort_order," +
+            "menu_item_options(id,menu_item_id,label,price,sort_order,is_available)",
+        restaurant_id: `eq.${restaurantId}`,
+        is_available: "eq.true",
+        order: "sort_order.asc",
+    });
 }

@@ -8,7 +8,7 @@ export type RestaurantStatus =
     }
     | {
         isOpen: false;
-        label: "CLOSED TODAY" | "CLOSED";
+        label: "CLOSED TODAY" | "CLOSED" | "STATUS UNAVAILABLE";
         message: string;
     };
 
