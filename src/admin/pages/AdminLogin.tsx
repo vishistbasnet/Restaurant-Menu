@@ -39,7 +39,7 @@ function AdminLogin() {
             const { data: adminUser, error: adminError } =
                 await supabase
                     .from("admin_users")
-                    .select("user_id, restaurant_id")
+                    .select("user_id, restaurant_id, is_active")
                     .eq("user_id", data.user.id)
                     .maybeSingle();
 
@@ -56,6 +56,14 @@ function AdminLogin() {
 
                 throw new Error(
                     "This account does not have admin access."
+                );
+            }
+
+            if (!adminUser.is_active) {
+                await supabase.auth.signOut();
+
+                throw new Error(
+                    "This account has been deactivated. Please contact your administrator."
                 );
             }
 
@@ -84,7 +92,7 @@ function AdminLogin() {
             <div className="w-full max-w-md">
                 <div className="mb-8 text-center">
                     <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-yellow-400 text-xl font-black text-gray-950">
-                        <a href="App.tsx"><img
+                        <a href="/"><img
                             src="/favicon.svg"
                             alt="Meal Deal"
                             className="h-9 w-9 shrink-0"
